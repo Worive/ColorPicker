@@ -1,10 +1,8 @@
-package com.worive;
+package com.worive.client.gui;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Consumer;
 
 import net.minecraft.block.Block;
@@ -16,14 +14,21 @@ import net.minecraft.util.ChatAllowedCharacters;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.common.config.Property;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-final class PickerScreen extends ToolScreen {
+import com.worive.client.colour.BlockColours;
+import com.worive.client.colour.ColourMath;
+import com.worive.client.colour.TexturePattern;
+import com.worive.client.gui.PickerSettings.Tolerance;
+
+public final class PickerScreen extends ToolScreen {
+
+    private static final Logger LOG = LogManager.getLogger("ColorPicker");
 
     private static final int WIDTH = 282, HEIGHT = 276;
     private static final int COLUMNS = 12, ROWS = 2, CELL = 20, MATCH_LIMIT = 100;
@@ -41,24 +46,23 @@ final class PickerScreen extends ToolScreen {
     private static final int FIELD_X = 94, FIELD_W = 37;
     private static final int SETTINGS_WIDTH = 132, FILTER_X = WIDTH - PANEL_INSET - SETTINGS_WIDTH, FILTER_Y = SV_Y;
     private static final int TOLERANCE_Y = FILTER_Y + FILTERS_HEIGHT + 13, PATTERN_Y = TOLERANCE_Y + 24;
-    private static final Tolerance[] TOLERANCE_STEPS = Tolerance.values();
     private static final SteppedSlider TOLERANCE_SLIDER = new SteppedSlider(
         FILTER_X,
         TOLERANCE_Y,
         SETTINGS_WIDTH,
-        TOLERANCE_STEPS.length);
+        PickerSettings.TOLERANCE_STEP_COUNT);
     private static final SteppedSlider PATTERN_SLIDER = new SteppedSlider(
         FILTER_X,
         PATTERN_Y,
         SETTINGS_WIDTH,
-        TexturePattern.STEPS.length);
+        PickerSettings.PATTERN_STEP_COUNT);
     private static final int HOTBAR_X = 10, HOTBAR_Y = 251, TRASH_X = 178;
     private static final String[] CHANNEL_NAMES = { "R", "G", "B", "Hue", "Sat", "Bri" };
-    private static final float[] MAX = { 255, 255, 255, 360, 100, 100 };
     private static final int DRAG_SV = 6, DRAG_HUE = 7, DRAG_SCROLL = 8, DRAG_TOLERANCE = 9, DRAG_PATTERN = 10;
 
     private final BlockColours colours;
-    private final State state;
+    private final PickerSettings settings;
+    private final PickerColour colour;
     private final MovingObjectPosition worldTarget;
     private final GuiTextField[] fields = new GuiTextField[7];
     private List<BlockColours.Entry> matches = Collections.emptyList();
@@ -77,11 +81,12 @@ final class PickerScreen extends ToolScreen {
     private String notice = "";
     private int noticeTicks;
 
-    PickerScreen(GuiScreen parent, BlockColours colours, State state, MovingObjectPosition worldTarget, int openKey,
-        Consumer<Boolean> openTool) {
+    public PickerScreen(GuiScreen parent, BlockColours colours, PickerSettings settings, PickerColour colour,
+        MovingObjectPosition worldTarget, int openKey, Consumer<Boolean> openTool) {
         super(parent, openKey, openTool, false, WIDTH, HEIGHT);
         this.colours = colours;
-        this.state = state;
+        this.settings = settings;
+        this.colour = colour;
         this.worldTarget = worldTarget;
     }
 
@@ -135,15 +140,16 @@ final class PickerScreen extends ToolScreen {
         int x = localX(mouseX), y = localY(mouseY);
         beginPanel("ColorPicker", x, y);
         drawColourControls(x, y);
-        drawFilters(FILTER_X, FILTER_Y, state.filters, x, y);
+        drawFilters(FILTER_X, FILTER_Y, settings.filters(), x, y);
+        Tolerance tolerance = settings.tolerance();
         drawSteppedSlider(
             TOLERANCE_SLIDER,
             "Tolerance",
-            state.tolerance.label,
-            state.tolerance.ordinal(),
+            tolerance.label,
+            tolerance.ordinal(),
             buttonFocus == TOLERANCE_FOCUS && sliderFocusVisible,
             dragControl == DRAG_TOLERANCE || TOLERANCE_SLIDER.contains(x, y));
-        TexturePattern pattern = state.pattern();
+        TexturePattern pattern = settings.pattern();
         drawSteppedSlider(
             PATTERN_SLIDER,
             "Pattern",
@@ -163,33 +169,34 @@ final class PickerScreen extends ToolScreen {
     }
 
     private void updateResults() {
-        boolean queryChanged = rankedRgb != state.rgb || rankedFilters != state.filters
-            || rankedTolerance != state.tolerance;
+        int rgb = colour.rgb();
+        int filters = settings.filters();
+        Tolerance tolerance = settings.tolerance();
+        boolean queryChanged = rankedRgb != rgb || rankedFilters != filters || rankedTolerance != tolerance;
         if (queryChanged || rankedRevision != colours.revision()) {
-            matches = colours
-                .closest(ColourMath.lab(state.rgb), state.filters, MATCH_LIMIT, state.tolerance.distanceSquared);
+            matches = colours.closest(rgb, filters, MATCH_LIMIT, tolerance.distanceSquared);
             firstRow = queryChanged ? 0 : Math.min(firstRow, lastRow());
-            rankedRgb = state.rgb;
-            rankedFilters = state.filters;
-            rankedTolerance = state.tolerance;
+            rankedRgb = rgb;
+            rankedFilters = filters;
+            rankedTolerance = tolerance;
             rankedRevision = colours.revision();
         }
     }
 
     private void drawColourControls(int x, int y) {
         frame(SV_X, SV_Y, SV_W, SV_H, SLOT_GREY, true);
-        int hueRgb = ColourMath.hsb(state.hue, 1, 1);
+        int hueRgb = ColourMath.hsb(colour.hue(), 1, 1);
         gradient(SV_X + 1, SV_Y + 1, SV_W - 2, SV_H - 2, 0xffffff, hueRgb, 0xffffff, hueRgb);
         drawGradientRect(SV_X + 1, SV_Y + 1, SV_X + SV_W - 1, SV_Y + SV_H - 1, 0, 0xff000000);
-        int saturationMarker = SV_X + 1 + Math.round(state.saturation * (SV_W - 3));
-        int brightnessMarker = SV_Y + 1 + Math.round((1 - state.brightness) * (SV_H - 3));
+        int saturationMarker = SV_X + 1 + Math.round(colour.saturation() * (SV_W - 3));
+        int brightnessMarker = SV_Y + 1 + Math.round((1 - colour.brightness()) * (SV_H - 3));
         outline(saturationMarker - 3, brightnessMarker - 3, 7, 7, 0xffffffff, 0xff181818);
         drawRect(
             saturationMarker - 1,
             brightnessMarker - 1,
             saturationMarker + 2,
             brightnessMarker + 2,
-            solid(state.rgb));
+            solid(colour.rgb()));
 
         frame(HUE_X, SV_Y, HUE_W, SV_H, SLOT_GREY, true);
         for (int i = 0; i < 6; i++) {
@@ -198,7 +205,7 @@ final class PickerScreen extends ToolScreen {
             int start = ColourMath.hsb(i / 6f, 1, 1), end = ColourMath.hsb((i + 1) / 6f, 1, 1);
             gradient(HUE_X + 1, from, HUE_W - 2, to - from, start, start, end, end);
         }
-        int hueMarker = SV_Y + 1 + Math.round(state.hue * (SV_H - 3));
+        int hueMarker = SV_Y + 1 + Math.round(colour.hue() * (SV_H - 3));
         outline(HUE_X - 1, hueMarker - 1, HUE_W + 2, 3, 0xffffffff, 0xff181818);
 
         outline(
@@ -206,7 +213,7 @@ final class PickerScreen extends ToolScreen {
             SWATCH_Y,
             SWATCH_W,
             SLOT,
-            solid(state.rgb),
+            solid(colour.rgb()),
             inside(x, y, SV_X, SWATCH_Y, SWATCH_W, SLOT) ? LABEL : MUTED);
         drawInventorySlot(EYE_X, SWATCH_Y);
         if (sampled == null) {
@@ -218,8 +225,8 @@ final class PickerScreen extends ToolScreen {
         drawField(HEX_FIELD, HEX_X, SWATCH_Y, HEX_W, SLOT);
 
         fontRendererObj.drawString("Channels", SV_X, MODE_Y + 3, LABEL);
-        drawChannelMode("RGB", RGB_X, !state.hsbChannels, x, y);
-        drawChannelMode("HSB", HSB_X, state.hsbChannels, x, y);
+        drawChannelMode("RGB", RGB_X, !colour.hsbChannels, x, y);
+        drawChannelMode("HSB", HSB_X, colour.hsbChannels, x, y);
 
         int first = firstChannel();
         for (int i = first; i < first + CHANNELS_PER_MODE; i++) {
@@ -244,7 +251,7 @@ final class PickerScreen extends ToolScreen {
     }
 
     private int firstChannel() {
-        return state.hsbChannels ? CHANNELS_PER_MODE : 0;
+        return colour.hsbChannels ? CHANNELS_PER_MODE : 0;
     }
 
     private static int channelY(int channel) {
@@ -262,10 +269,10 @@ final class PickerScreen extends ToolScreen {
                 gradient(from, y + 1, to - from, CHANNEL_H - 2, start, end, start, end);
             }
         } else {
-            int start = channelColour(channel, 0), end = channelColour(channel, 1);
+            int start = colour.channelColour(channel, 0), end = colour.channelColour(channel, 1);
             gradient(SLIDER_X + 1, y + 1, railWidth, CHANNEL_H - 2, start, end, start, end);
         }
-        int thumbX = SLIDER_X + SLIDER_INSET + Math.round(value(channel) * SLIDER_RANGE) - 3;
+        int thumbX = SLIDER_X + SLIDER_INSET + Math.round(colour.value(channel) * SLIDER_RANGE) - 3;
         boolean hovered = dragControl == channel || inside(mouseX, mouseY, SLIDER_X, y, SLIDER_W, CHANNEL_H);
         drawButtonSkin(thumbX, y, 7, CHANNEL_H, hovered ? 2 : 1);
     }
@@ -274,7 +281,7 @@ final class PickerScreen extends ToolScreen {
         GuiTextField field = fields[i];
         boolean focused = field.isFocused();
         boolean invalid = focused && (i == HEX_FIELD ? ColourMath.parseHex(field.getText()) == null
-            : parseChannel(field.getText(), i) == null);
+            : PickerColour.parseChannel(field.getText(), i) == null);
         outline(x, y, w, h, 0xff202020, invalid ? 0xffc04444 : focused ? 0xffeeeeee : 0xff696969);
         field.drawTextBox();
     }
@@ -357,7 +364,7 @@ final class PickerScreen extends ToolScreen {
             text = Arrays
                 .asList("Eyedropper", "Drop an item to sample", "Right-click to sample the block you aimed at");
         } else if (inside(x, y, SV_X, SWATCH_Y, SWATCH_W, SLOT)) {
-            text = Arrays.asList(ColourMath.hex(state.rgb), "Click to copy hex");
+            text = Arrays.asList(ColourMath.hex(colour.rgb()), "Click to copy hex");
         } else if (dragControl != DRAG_TOLERANCE && TOLERANCE_SLIDER.contains(x, y)) {
             text = Arrays.asList("Maximum colour difference", "Any on the left, Strict on the right");
         } else if (dragControl != DRAG_PATTERN && PATTERN_SLIDER.contains(x, y)) {
@@ -374,7 +381,7 @@ final class PickerScreen extends ToolScreen {
         } else {
             int filter = filterAt(x, y, FILTER_X, FILTER_Y);
             if (filter != 0) {
-                text = filterTooltip(filter, state.filters);
+                text = filterTooltip(filter, settings.filters());
             }
         }
         if (text != null) {
@@ -464,15 +471,15 @@ final class PickerScreen extends ToolScreen {
         }
         int filter = filterAt(x, y, FILTER_X, FILTER_Y);
         if (filter != 0) {
-            state.toggleFilter(filter);
+            settings.toggleFilter(filter);
             return;
         }
         if (inside(x, y, RGB_X, MODE_Y, MODE_W, MODE_H)) {
-            state.hsbChannels = false;
+            colour.hsbChannels = false;
             return;
         }
         if (inside(x, y, HSB_X, MODE_Y, MODE_W, MODE_H)) {
-            state.hsbChannels = true;
+            colour.hsbChannels = true;
             return;
         }
         boolean tolerance = TOLERANCE_SLIDER.contains(x, y);
@@ -558,32 +565,35 @@ final class PickerScreen extends ToolScreen {
         }
         if (buttonFocus == TOLERANCE_FOCUS || buttonFocus == PATTERN_FOCUS) {
             boolean tolerance = buttonFocus == TOLERANCE_FOCUS;
-            int step = tolerance ? TOLERANCE_SLIDER.keyStep(state.tolerance.ordinal(), key)
+            int step = tolerance ? TOLERANCE_SLIDER.keyStep(
+                settings.tolerance()
+                    .ordinal(),
+                key)
                 : PATTERN_SLIDER.keyStep(
-                    state.pattern()
+                    settings.pattern()
                         .ordinal(),
                     key);
             if (step >= 0) {
                 sliderFocusVisible = true;
                 if (tolerance) {
-                    state.setToleranceStep(step);
+                    settings.setToleranceStep(step);
                 } else {
-                    state.setPatternStep(step);
+                    settings.setPatternStep(step);
                 }
                 return;
             }
         } else if (buttonFocus == MODE_FOCUS) {
             switch (key) {
                 case Keyboard.KEY_LEFT:
-                    state.hsbChannels = false;
+                    colour.hsbChannels = false;
                     return;
                 case Keyboard.KEY_RIGHT:
-                    state.hsbChannels = true;
+                    colour.hsbChannels = true;
                     return;
                 case Keyboard.KEY_RETURN:
                 case Keyboard.KEY_NUMPADENTER:
                 case Keyboard.KEY_SPACE:
-                    state.hsbChannels = !state.hsbChannels;
+                    colour.hsbChannels = !colour.hsbChannels;
                     return;
                 default:
                     break;
@@ -597,12 +607,12 @@ final class PickerScreen extends ToolScreen {
                 if (focused == HEX_FIELD) {
                     Integer rgb = ColourMath.parseHex(fields[focused].getText());
                     if (rgb != null) {
-                        state.setRgb(rgb);
+                        colour.setRgb(rgb);
                     }
                 } else {
-                    Float value = parseChannel(fields[focused].getText(), focused);
+                    Float value = PickerColour.parseChannel(fields[focused].getText(), focused);
                     if (value != null) {
-                        setChannel(focused, value);
+                        colour.setChannel(focused, value);
                     }
                 }
                 syncFields();
@@ -678,80 +688,35 @@ final class PickerScreen extends ToolScreen {
                 : (typed >= '0' && typed <= '9') || typed == '.');
     }
 
-    private static Float parseChannel(String text, int index) {
-        if (!text.matches("[0-9]*\\.?[0-9]+|[0-9]+\\.")) {
-            return null;
-        }
-        float number = Float.parseFloat(text);
-        return number <= MAX[index] ? number / MAX[index] : null;
-    }
-
     private void adjust(int x, int y) {
         if (dragControl == DRAG_SCROLL) {
             scrollTo(y);
             return;
         }
         if (dragControl == DRAG_TOLERANCE) {
-            state.setToleranceStep(TOLERANCE_SLIDER.mouseStep(x));
+            settings.setToleranceStep(TOLERANCE_SLIDER.mouseStep(x));
             return;
         }
         if (dragControl == DRAG_PATTERN) {
-            state.setPatternStep(PATTERN_SLIDER.mouseStep(x));
+            settings.setPatternStep(PATTERN_SLIDER.mouseStep(x));
             return;
         }
         if (dragControl == DRAG_SV) {
-            state.setHsb(state.hue, fraction(x, SV_X + 1, SV_W - 3), 1 - fraction(y, SV_Y + 1, SV_H - 3));
+            colour.setHsb(colour.hue(), fraction(x, SV_X + 1, SV_W - 3), 1 - fraction(y, SV_Y + 1, SV_H - 3));
         } else if (dragControl == DRAG_HUE) {
-            state.setHsb(fraction(y, SV_Y + 1, SV_H - 3), state.saturation, state.brightness);
+            colour.setHsb(fraction(y, SV_Y + 1, SV_H - 3), colour.saturation(), colour.brightness());
         } else if (dragControl >= 0) {
-            setChannel(dragControl, fraction(x, SLIDER_X + SLIDER_INSET, SLIDER_RANGE));
+            colour.setChannel(dragControl, fraction(x, SLIDER_X + SLIDER_INSET, SLIDER_RANGE));
         } else {
             return;
         }
         syncFields();
     }
 
-    private int channelColour(int channel, float fraction) {
-        if (channel < 3) {
-            int shift = 16 - channel * 8;
-            return (state.rgb & ~(255 << shift)) | (Math.round(fraction * 255) << shift);
-        }
-        return ColourMath.hsb(
-            channel == 3 ? fraction : state.hue,
-            channel == 4 ? fraction : state.saturation,
-            channel == 5 ? fraction : state.brightness);
-    }
-
-    private void setChannel(int channel, float fraction) {
-        if (channel < 3) {
-            state.setRgb(channelColour(channel, fraction));
-        } else {
-            state.setHsb(
-                channel == 3 ? fraction : state.hue,
-                channel == 4 ? fraction : state.saturation,
-                channel == 5 ? fraction : state.brightness);
-        }
-    }
-
-    private float value(int index) {
-        switch (index) {
-            case 3:
-                return state.hue;
-            case 4:
-                return state.saturation;
-            case 5:
-                return state.brightness;
-            default:
-                return ColourMath.channel(state.rgb, index) / 255f;
-        }
-    }
-
     private void syncFields() {
         for (int i = 0; i < fields.length; i++) {
             if (!fields[i].isFocused()) {
-                fields[i].setText(
-                    i == HEX_FIELD ? ColourMath.hex(state.rgb)
-                        : String.format(Locale.ROOT, i < 3 ? "%.0f" : "%.1f", value(i) * MAX[i]));
+                fields[i].setText(i == HEX_FIELD ? ColourMath.hex(colour.rgb()) : colour.channelText(i));
             }
         }
     }
@@ -779,12 +744,12 @@ final class PickerScreen extends ToolScreen {
         try {
             rgb = colours.sample(stack);
         } catch (RuntimeException failure) {
-            ColorPickerMod.LOG.debug("Could not sample item", failure);
+            LOG.debug("Could not sample item", failure);
             rgb = null;
         }
         if (rgb != null) {
             sampled = stack.copy();
-            state.setRgb(rgb);
+            colour.setRgb(rgb);
             syncFields();
         } else {
             notifyUser("No colour found");
@@ -803,12 +768,12 @@ final class PickerScreen extends ToolScreen {
             rgb = colours
                 .sample(block, mc.theWorld.getBlockMetadata(x, y, z), block.colorMultiplier(mc.theWorld, x, y, z));
         } catch (RuntimeException failure) {
-            ColorPickerMod.LOG.debug("Could not sample block in world", failure);
+            LOG.debug("Could not sample block in world", failure);
             rgb = null;
         }
         if (rgb != null) {
             sampled = null;
-            state.setRgb(rgb);
+            colour.setRgb(rgb);
             syncFields();
         } else {
             notifyUser("No colour found");
@@ -863,8 +828,8 @@ final class PickerScreen extends ToolScreen {
     }
 
     private void copyHex() {
-        setClipboardString(ColourMath.hex(state.rgb));
-        notifyUser("Copied " + ColourMath.hex(state.rgb));
+        setClipboardString(ColourMath.hex(colour.rgb()));
+        notifyUser("Copied " + ColourMath.hex(colour.rgb()));
     }
 
     private void notifyUser(String message) {
@@ -960,112 +925,5 @@ final class PickerScreen extends ToolScreen {
         }
         drawRect(x + 6, y, x + 9, y + 2, colour);
         drawRect(x + 5, y + 2, x + 9, y + 3, colour);
-    }
-
-    private enum Tolerance {
-
-        ANY("Any", Double.POSITIVE_INFINITY),
-        WIDE("Wide", 0.20),
-        STANDARD("Standard", 0.10),
-        CLOSE("Close", 0.05),
-        EXACT("Strict", 0);
-
-        final String label;
-        final double distanceSquared;
-
-        Tolerance(String label, double distance) {
-            this.label = label;
-            distanceSquared = distance * distance;
-        }
-    }
-
-    static final class State {
-
-        private final Configuration config;
-        private final Property matchTolerance;
-        private final Property enabledFilters;
-        private Tolerance tolerance;
-
-        int rgb = 0x808080;
-        int filters;
-        boolean hsbChannels;
-        float hue, saturation, brightness;
-
-        State(File configFile) {
-            config = new Configuration(configFile);
-            enabledFilters = config.get(
-                Configuration.CATEGORY_GENERAL,
-                "enabledFilters",
-                0,
-                "Enabled filters. Add the values for Full cubes (1), Collidable (2), Opaque (4), One texture (8), "
-                    + "No tile entities (16), Low contrast (32), and No falling (64). "
-                    + "For Pattern, add 128 for Smooth, 256 for Patterned, or 512 for Outlined.");
-            filters = enabledFilters.getInt(0) & BlockColours.ALL_FILTERS;
-            if (Integer.bitCount(filters & TexturePattern.FILTERS) > 1) {
-                filters &= ~TexturePattern.FILTERS;
-                enabledFilters.set(filters);
-            }
-            matchTolerance = config.get(
-                Configuration.CATEGORY_GENERAL,
-                "matchTolerance",
-                Tolerance.STANDARD.name(),
-                "Maximum Oklab distance for ColorPicker matches. EXACT: 0, CLOSE: 0.05, STANDARD: 0.10, WIDE: 0.20, ANY: unlimited.");
-            try {
-                tolerance = Tolerance.valueOf(matchTolerance.getString());
-            } catch (IllegalArgumentException invalid) {
-                tolerance = Tolerance.STANDARD;
-                matchTolerance.set(tolerance.name());
-            }
-            if (config.hasChanged()) {
-                config.save();
-            }
-            setRgb(rgb);
-        }
-
-        void toggleFilter(int filter) {
-            saveFilters(filters ^ filter);
-        }
-
-        TexturePattern pattern() {
-            return TexturePattern.fromFilters(filters);
-        }
-
-        void setPatternStep(int step) {
-            int selected = (filters & ~TexturePattern.FILTERS) | TexturePattern.STEPS[step].bit;
-            if (selected != filters) {
-                saveFilters(selected);
-            }
-        }
-
-        private void saveFilters(int selected) {
-            filters = selected;
-            enabledFilters.set(filters);
-            config.save();
-        }
-
-        private void setToleranceStep(int step) {
-            Tolerance preset = TOLERANCE_STEPS[step];
-            if (tolerance == preset) {
-                return;
-            }
-            tolerance = preset;
-            matchTolerance.set(tolerance.name());
-            config.save();
-        }
-
-        void setRgb(int rgb) {
-            this.rgb = rgb;
-            float[] hsb = ColourMath.toHsb(rgb, hue);
-            hue = hsb[0];
-            saturation = hsb[1];
-            brightness = hsb[2];
-        }
-
-        void setHsb(float hue, float saturation, float brightness) {
-            this.hue = hue;
-            this.saturation = saturation;
-            this.brightness = brightness;
-            rgb = ColourMath.hsb(hue, saturation, brightness);
-        }
     }
 }

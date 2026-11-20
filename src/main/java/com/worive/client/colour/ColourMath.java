@@ -1,9 +1,9 @@
-package com.worive;
+package com.worive.client.colour;
 
 import java.awt.Color;
 import java.util.Locale;
 
-final class ColourMath {
+public final class ColourMath {
 
     private static final double[] LINEAR = new double[256];
 
@@ -20,15 +20,15 @@ final class ColourMath {
         return (red << 16) | (green << 8) | blue;
     }
 
-    static int channel(int rgb, int index) {
+    public static int channel(int rgb, int index) {
         return (rgb >> (16 - index * 8)) & 255;
     }
 
-    static int hsb(float hue, float saturation, float brightness) {
+    public static int hsb(float hue, float saturation, float brightness) {
         return Color.HSBtoRGB(hue, saturation, brightness) & 0xffffff;
     }
 
-    static float[] toHsb(int rgb, float previousHue) {
+    public static float[] toHsb(int rgb, float previousHue) {
         float[] hsb = Color.RGBtoHSB(channel(rgb, 0), channel(rgb, 1), channel(rgb, 2), null);
         if (hsb[1] == 0) {
             hsb[0] = previousHue;
@@ -36,11 +36,11 @@ final class ColourMath {
         return hsb;
     }
 
-    static String hex(int rgb) {
+    public static String hex(int rgb) {
         return String.format(Locale.ROOT, "#%06x", rgb & 0xffffff);
     }
 
-    static Integer parseHex(String text) {
+    public static Integer parseHex(String text) {
         String digits = text.startsWith("#") ? text.substring(1) : text;
         return digits.matches("[0-9a-fA-F]{6}") ? Integer.parseInt(digits, 16) : null;
     }

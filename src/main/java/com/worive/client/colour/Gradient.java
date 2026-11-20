@@ -1,4 +1,4 @@
-package com.worive;
+package com.worive.client.colour;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -7,10 +7,14 @@ import java.util.List;
 
 import net.minecraft.item.ItemStack;
 
-final class Gradient {
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-    static final int SLOTS = 9;
+public final class Gradient {
+
+    public static final int SLOTS = 9;
     private static final int CANDIDATES = 48;
+    private static final Logger LOG = LogManager.getLogger("ColorPicker");
 
     private final ItemStack[] inputs = new ItemStack[SLOTS];
     private final List<List<BlockColours.Entry>> alternatives = new ArrayList<>(SLOTS);
@@ -20,27 +24,27 @@ final class Gradient {
     private int lastFilters;
     private long lastRevision = -1;
 
-    Gradient() {
+    public Gradient() {
         Arrays.fill(selected, -1);
         for (int i = 0; i < SLOTS; i++) {
             alternatives.add(Collections.emptyList());
         }
     }
 
-    ItemStack input(int i) {
+    public ItemStack input(int i) {
         return inputs[i];
     }
 
-    ItemStack output(int i) {
+    public ItemStack output(int i) {
         List<BlockColours.Entry> candidates = alternatives.get(i);
         return candidates.isEmpty() ? inputs[i] : candidates.get(rank(i)).stack;
     }
 
-    int rank(int i) {
+    public int rank(int i) {
         return selected[i];
     }
 
-    boolean cycle(int i, int direction) {
+    public boolean cycle(int i, int direction) {
         int current = rank(i);
         int next = current + direction;
         if (current < 0 || next < 0
@@ -53,7 +57,7 @@ final class Gradient {
         return true;
     }
 
-    boolean setInput(int i, ItemStack stack, BlockColours colours) {
+    public boolean setInput(int i, ItemStack stack, BlockColours colours) {
         if (stack != null && sample(colours, stack) == null) {
             return false;
         }
@@ -65,7 +69,7 @@ final class Gradient {
         return true;
     }
 
-    void update(BlockColours colours, int filters) {
+    public void update(BlockColours colours, int filters) {
         if (!dirty && lastFilters == filters && lastRevision == colours.revision()) {
             return;
         }
@@ -152,7 +156,7 @@ final class Gradient {
             from[2] + (to[2] - from[2]) * progress };
     }
 
-    static boolean same(ItemStack a, ItemStack b) {
+    public static boolean same(ItemStack a, ItemStack b) {
         return a != null && b != null && a.isItemEqual(b) && ItemStack.areItemStackTagsEqual(a, b);
     }
 
@@ -160,7 +164,7 @@ final class Gradient {
         try {
             return colours.sampleBlock(stack);
         } catch (RuntimeException failure) {
-            ColorPickerMod.LOG.debug("Could not sample gradient input", failure);
+            LOG.debug("Could not sample gradient input", failure);
             return null;
         }
     }

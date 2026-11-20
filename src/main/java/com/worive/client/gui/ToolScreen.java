@@ -1,4 +1,4 @@
-package com.worive;
+package com.worive.client.gui;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,6 +19,8 @@ import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
+
+import com.worive.client.colour.BlockColours;
 
 import codechicken.nei.api.INEIGuiHandler;
 import cpw.mods.fml.common.Loader;

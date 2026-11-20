@@ -12,6 +12,14 @@ ColorPicker is a client-side mod for Minecraft 1.7.10 that finds blocks by colou
 | Gradient Helper | Fill gaps between input blocks, cycle through alternatives, and apply the gradient to your hotbar in Creative mode. |
 | NEI integration | Sample blocks or use them as gradient inputs directly from Not Enough Items. |
 
+## Development
+
+Run `./gradlew build` to compile, check, and package the mod.
+
+- `ColorPickerMod` is the Forge entry point and owns the client session.
+- `client/colour` contains block matching and gradient generation. Texture sampling and block shape checks live alongside the colour index.
+- `client/gui` contains the two screens and NEI hooks. `PickerSettings` saves the shared filters and match tolerance, while `PickerColour` holds the current colour for the client session.
+
 ## License
 
 [MIT License](LICENSE)

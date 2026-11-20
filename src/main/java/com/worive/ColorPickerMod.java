@@ -1,16 +1,20 @@
 package com.worive;
 
-import java.io.File;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.MovingObjectPosition;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.lwjgl.input.Keyboard;
+
+import com.worive.client.colour.BlockColours;
+import com.worive.client.colour.Gradient;
+import com.worive.client.gui.GradientScreen;
+import com.worive.client.gui.NeiHoverHandler;
+import com.worive.client.gui.PickerColour;
+import com.worive.client.gui.PickerScreen;
+import com.worive.client.gui.PickerSettings;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -30,8 +34,6 @@ import cpw.mods.fml.relauncher.SideOnly;
     acceptableRemoteVersions = "*")
 public final class ColorPickerMod {
 
-    static final Logger LOG = LogManager.getLogger("ColorPicker");
-
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         if (event.getSide()
@@ -50,14 +52,9 @@ public final class ColorPickerMod {
             Keyboard.KEY_G,
             "key.categories.colorpicker");
         private final BlockColours colours = new BlockColours();
-        private final PickerScreen.State state = new PickerScreen.State(configFile(minecraft.mcDataDir));
+        private final PickerSettings settings = new PickerSettings(minecraft.mcDataDir);
+        private final PickerColour pickerColour = new PickerColour();
         private final Gradient gradient = new Gradient();
-
-        private static File configFile(File gameDirectory) {
-            File config = new File(gameDirectory, "config/colorpicker.cfg");
-            File legacyConfig = new File(gameDirectory, "config/colourpicker.cfg");
-            return !config.exists() && legacyConfig.isFile() ? legacyConfig : config;
-        }
 
         void register() {
             if (Loader.isModLoaded("NotEnoughItems")) {
@@ -81,10 +78,17 @@ public final class ColorPickerMod {
             int key = open.getKeyCode();
             if (showGradient) {
                 minecraft.displayGuiScreen(
-                    new GradientScreen(parent, colours, state, gradient, key, other -> show(parent, target, other)));
+                    new GradientScreen(parent, colours, settings, gradient, key, other -> show(parent, target, other)));
             } else {
                 minecraft.displayGuiScreen(
-                    new PickerScreen(parent, colours, state, target, key, other -> show(parent, target, other)));
+                    new PickerScreen(
+                        parent,
+                        colours,
+                        settings,
+                        pickerColour,
+                        target,
+                        key,
+                        other -> show(parent, target, other)));
             }
         }
     }

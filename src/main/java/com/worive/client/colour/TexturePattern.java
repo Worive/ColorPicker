@@ -1,31 +1,31 @@
-package com.worive;
+package com.worive.client.colour;
 
 import java.awt.image.BufferedImage;
 
-enum TexturePattern {
+public enum TexturePattern {
 
     ANY("Any", 0),
     SMOOTH("Smooth", 128),
     PATTERNED("Patterned", 256),
     OUTLINED("Outlined", 512);
 
-    static final TexturePattern[] STEPS = values();
-    static final int FILTERS = SMOOTH.bit | PATTERNED.bit | OUTLINED.bit;
+    private static final TexturePattern[] STEPS = values();
+    public static final int FILTERS = SMOOTH.bit | PATTERNED.bit | OUTLINED.bit;
     private static final double BORDER_CONTRAST = 0.03;
     private static final double BEVEL_CONTRAST = 0.14;
     private static final double SEAM_COLOUR_TOLERANCE = 0.1;
     private static final int FAINT_SEAM = 1;
     private static final int CLEAR_SEAM = 2;
 
-    final String label;
-    final int bit;
+    public final String label;
+    public final int bit;
 
     TexturePattern(String label, int bit) {
         this.label = label;
         this.bit = bit;
     }
 
-    static TexturePattern fromFilters(int filters) {
+    public static TexturePattern fromFilters(int filters) {
         int selected = filters & FILTERS;
         for (TexturePattern pattern : STEPS) {
             if (pattern.bit == selected) {

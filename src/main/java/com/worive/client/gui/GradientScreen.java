@@ -1,4 +1,4 @@
-package com.worive;
+package com.worive.client.gui;
 
 import java.util.Arrays;
 import java.util.List;
@@ -10,7 +10,11 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-final class GradientScreen extends ToolScreen {
+import com.worive.client.colour.BlockColours;
+import com.worive.client.colour.Gradient;
+import com.worive.client.colour.TexturePattern;
+
+public final class GradientScreen extends ToolScreen {
 
     private static final int WIDTH = 306, HEIGHT = 186;
     private static final int ROW_X = PANEL_INSET, TRASH_X = ROW_X + Gradient.SLOTS * SLOT + 6;
@@ -21,12 +25,12 @@ final class GradientScreen extends ToolScreen {
         WIDTH - PANEL_INSET - PATTERN_WIDTH,
         FILTER_Y + FILTERS_HEIGHT + 13,
         PATTERN_WIDTH,
-        TexturePattern.STEPS.length);
+        PickerSettings.PATTERN_STEP_COUNT);
     private static final int APPLY_W = 95, APPLY_X = WIDTH - PANEL_INSET - APPLY_W;
     private static final int REFRESH_Y = OUTPUT_Y + SLOT + 2, REFRESH_H = 12;
 
     private final BlockColours colours;
-    private final PickerScreen.State picker;
+    private final PickerSettings settings;
     private final Gradient gradient;
     private ItemStack held;
     private int heldFrom = -1;
@@ -36,11 +40,11 @@ final class GradientScreen extends ToolScreen {
     private int pointerX, pointerY;
     private int noticeTicks;
 
-    GradientScreen(GuiScreen parent, BlockColours colours, PickerScreen.State picker, Gradient gradient, int openKey,
-        Consumer<Boolean> openTool) {
+    public GradientScreen(GuiScreen parent, BlockColours colours, PickerSettings settings, Gradient gradient,
+        int openKey, Consumer<Boolean> openTool) {
         super(parent, openKey, openTool, true, WIDTH, HEIGHT);
         this.colours = colours;
-        this.picker = picker;
+        this.settings = settings;
         this.gradient = gradient;
     }
 
@@ -66,7 +70,7 @@ final class GradientScreen extends ToolScreen {
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
-        gradient.update(colours, picker.filters);
+        gradient.update(colours, settings.filters());
         int x = localX(mouseX), y = localY(mouseY);
         pointerX = x;
         pointerY = y;
@@ -95,8 +99,8 @@ final class GradientScreen extends ToolScreen {
         drawTrash(TRASH_X, HOTBAR_Y, true);
         highlight(TRASH_X, HOTBAR_Y, x, y);
 
-        drawFilters(FILTER_X, FILTER_Y, picker.filters, x, y);
-        TexturePattern pattern = picker.pattern();
+        drawFilters(FILTER_X, FILTER_Y, settings.filters(), x, y);
+        TexturePattern pattern = settings.pattern();
         drawSteppedSlider(
             PATTERN_SLIDER,
             "Pattern",
@@ -154,7 +158,7 @@ final class GradientScreen extends ToolScreen {
                 "Left-click for the next match",
                 "Right-click for the previous match");
         } else if (filter != 0) {
-            lines = filterTooltip(filter, picker.filters);
+            lines = filterTooltip(filter, settings.filters());
         } else if (!patternDragging && PATTERN_SLIDER.contains(x, y)) {
             lines = PATTERN_TOOLTIP;
         } else if (inside(x, y, APPLY_X, HOTBAR_Y, APPLY_W, SLOT)) {
@@ -181,7 +185,7 @@ final class GradientScreen extends ToolScreen {
             return;
         }
         patternFocused = false;
-        gradient.update(colours, picker.filters);
+        gradient.update(colours, settings.filters());
         int refresh = refreshAt(x, y);
         if (refresh >= 0 && button <= 1) {
             gradient.cycle(refresh, button == 0 ? 1 : -1);
@@ -227,11 +231,11 @@ final class GradientScreen extends ToolScreen {
         }
         int filter = filterAt(x, y, FILTER_X, FILTER_Y);
         if (filter != 0) {
-            picker.toggleFilter(filter);
+            settings.toggleFilter(filter);
         } else if (PATTERN_SLIDER.contains(x, y)) {
             patternDragging = true;
             patternFocused = true;
-            picker.setPatternStep(PATTERN_SLIDER.mouseStep(x));
+            settings.setPatternStep(PATTERN_SLIDER.mouseStep(x));
         } else if (inside(x, y, APPLY_X, HOTBAR_Y, APPLY_W, SLOT) && hasOutput()) {
             for (int i = 0; i < Gradient.SLOTS; i++) {
                 ItemStack result = gradient.output(i);
@@ -254,7 +258,7 @@ final class GradientScreen extends ToolScreen {
     protected void mouseClickMove(int mouseX, int mouseY, int button, long elapsed) {
         super.mouseClickMove(mouseX, mouseY, button, elapsed);
         if (button == 0 && patternDragging && creative()) {
-            picker.setPatternStep(PATTERN_SLIDER.mouseStep(localX(mouseX)));
+            settings.setPatternStep(PATTERN_SLIDER.mouseStep(localX(mouseX)));
         }
     }
 
@@ -298,11 +302,11 @@ final class GradientScreen extends ToolScreen {
         }
         if (patternFocused) {
             int step = PATTERN_SLIDER.keyStep(
-                picker.pattern()
+                settings.pattern()
                     .ordinal(),
                 key);
             if (step >= 0) {
-                picker.setPatternStep(step);
+                settings.setPatternStep(step);
                 return;
             }
         }

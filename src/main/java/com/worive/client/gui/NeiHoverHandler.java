@@ -1,4 +1,4 @@
-package com.worive;
+package com.worive.client.gui;
 
 import java.util.List;
 
@@ -9,9 +9,9 @@ import codechicken.nei.guihook.GuiContainerManager;
 import codechicken.nei.guihook.IContainerObjectHandler;
 import codechicken.nei.guihook.IContainerTooltipHandler;
 
-final class NeiHoverHandler implements IContainerObjectHandler, IContainerTooltipHandler {
+public final class NeiHoverHandler implements IContainerObjectHandler, IContainerTooltipHandler {
 
-    static void register() {
+    public static void register() {
         NeiHoverHandler handler = new NeiHoverHandler();
         GuiContainerManager.addObjectHandler(handler);
         GuiContainerManager.addTooltipHandler(handler);
