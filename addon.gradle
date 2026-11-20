@@ -1,0 +1,8 @@
+version = providers.environmentVariable('VERSION').getOrElse('1.2.0')
+ext.modVersion = version
+
+jar {
+    from('LICENSE') {
+        into 'META-INF'
+    }
+}

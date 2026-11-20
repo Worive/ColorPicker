@@ -1,0 +1,167 @@
+package com.worive;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import net.minecraft.item.ItemStack;
+
+final class Gradient {
+
+    static final int SLOTS = 9;
+    private static final int CANDIDATES = 48;
+
+    private final ItemStack[] inputs = new ItemStack[SLOTS];
+    private final List<List<BlockColours.Entry>> alternatives = new ArrayList<>(SLOTS);
+    private final int[] selected = new int[SLOTS];
+    private final int[] manualRanks = new int[SLOTS];
+    private boolean dirty = true;
+    private int lastFilters;
+    private long lastRevision = -1;
+
+    Gradient() {
+        Arrays.fill(selected, -1);
+        for (int i = 0; i < SLOTS; i++) {
+            alternatives.add(Collections.emptyList());
+        }
+    }
+
+    ItemStack input(int i) {
+        return inputs[i];
+    }
+
+    ItemStack output(int i) {
+        List<BlockColours.Entry> candidates = alternatives.get(i);
+        return candidates.isEmpty() ? inputs[i] : candidates.get(rank(i)).stack;
+    }
+
+    int rank(int i) {
+        return selected[i];
+    }
+
+    boolean cycle(int i, int direction) {
+        int current = rank(i);
+        int next = current + direction;
+        if (current < 0 || next < 0
+            || next >= alternatives.get(i)
+                .size()) {
+            return false;
+        }
+        selected[i] = next;
+        manualRanks[i] = next;
+        return true;
+    }
+
+    boolean setInput(int i, ItemStack stack, BlockColours colours) {
+        if (stack != null && sample(colours, stack) == null) {
+            return false;
+        }
+        inputs[i] = stack == null ? null : stack.copy();
+        if (inputs[i] != null) {
+            inputs[i].stackSize = 1;
+        }
+        dirty = true;
+        return true;
+    }
+
+    void update(BlockColours colours, int filters) {
+        if (!dirty && lastFilters == filters && lastRevision == colours.revision()) {
+            return;
+        }
+        if (dirty) {
+            Arrays.fill(manualRanks, -1);
+        }
+        for (int i = 0; i < SLOTS; i++) {
+            alternatives.set(i, Collections.emptyList());
+        }
+
+        double[] from = null;
+        int fromSlot = -1;
+        double[] runnerUpCosts = new double[SLOTS];
+        for (int i = 0; i < SLOTS; i++) {
+            if (inputs[i] == null) {
+                continue;
+            }
+            BlockColours.Entry entry = sample(colours, inputs[i]);
+            double[] to = entry == null ? null : entry.lab;
+            if (from != null && to != null) {
+                for (int slot = fromSlot + 1; slot < i; slot++) {
+                    double progress = (slot - fromSlot) / (double) (i - fromSlot);
+                    double[] target = interpolate(from, to, progress);
+                    List<BlockColours.Entry> candidates = colours.closest(target, filters, CANDIDATES);
+                    alternatives.set(slot, candidates);
+                    if (candidates.size() > 1) {
+                        runnerUpCosts[slot] = ColourMath.distance(candidates.get(1).lab, target)
+                            - ColourMath.distance(candidates.get(0).lab, target);
+                    }
+                }
+            }
+            from = to;
+            fromSlot = i;
+        }
+        selectDefaults(runnerUpCosts);
+        dirty = false;
+        lastFilters = filters;
+        lastRevision = colours.revision();
+    }
+
+    private void selectDefaults(double[] runnerUpCosts) {
+        int[][] repeats = new int[SLOTS + 1][2];
+        double[][] costs = new double[SLOTS + 1][2];
+        int[][] nextChoices = new int[SLOTS][2];
+        ItemStack[] nextOptions = { null };
+
+        // Score each suffix so a runner-up can avoid repeats on either side of its slot.
+        for (int i = SLOTS - 1; i >= 0; i--) {
+            List<BlockColours.Entry> candidates = alternatives.get(i);
+            selected[i] = Math.min(Math.max(manualRanks[i], 0), candidates.size() - 1);
+            ItemStack[] options = manualRanks[i] < 0 && candidates.size() > 1
+                ? new ItemStack[] { output(i), candidates.get(1).stack }
+                : new ItemStack[] { output(i) };
+
+            for (int choice = 0; choice < options.length; choice++) {
+                repeats[i][choice] = Integer.MAX_VALUE;
+                double cost = choice == 1 ? runnerUpCosts[i] : 0;
+                for (int next = 0; next < nextOptions.length; next++) {
+                    int repeatCount = repeats[i + 1][next] + (same(options[choice], nextOptions[next]) ? 1 : 0);
+                    double totalCost = cost + costs[i + 1][next];
+                    if (repeatCount < repeats[i][choice]
+                        || (repeatCount == repeats[i][choice] && totalCost < costs[i][choice])) {
+                        repeats[i][choice] = repeatCount;
+                        costs[i][choice] = totalCost;
+                        nextChoices[i][choice] = next;
+                    }
+                }
+            }
+            nextOptions = options;
+        }
+
+        // The first slot has a single option because only gaps between inputs are generated.
+        int choice = 0;
+        for (int i = 0; i < SLOTS; i++) {
+            if (choice == 1) {
+                selected[i] = 1;
+            }
+            choice = nextChoices[i][choice];
+        }
+    }
+
+    private static double[] interpolate(double[] from, double[] to, double progress) {
+        return new double[] { from[0] + (to[0] - from[0]) * progress, from[1] + (to[1] - from[1]) * progress,
+            from[2] + (to[2] - from[2]) * progress };
+    }
+
+    static boolean same(ItemStack a, ItemStack b) {
+        return a != null && b != null && a.isItemEqual(b) && ItemStack.areItemStackTagsEqual(a, b);
+    }
+
+    private static BlockColours.Entry sample(BlockColours colours, ItemStack stack) {
+        try {
+            return colours.sampleBlock(stack);
+        } catch (RuntimeException failure) {
+            ColorPickerMod.LOG.debug("Could not sample gradient input", failure);
+            return null;
+        }
+    }
+}
