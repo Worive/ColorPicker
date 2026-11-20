@@ -1,8 +1,8 @@
-package com.worive.client.gui;
+package com.worive.colorpicker.client.gui;
 
 import java.util.Locale;
 
-import com.worive.client.colour.ColourMath;
+import com.worive.colorpicker.client.colour.ColourMath;
 
 public final class PickerColour {
 

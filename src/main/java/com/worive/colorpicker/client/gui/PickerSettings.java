@@ -1,12 +1,12 @@
-package com.worive.client.gui;
+package com.worive.colorpicker.client.gui;
 
 import java.io.File;
 
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
 
-import com.worive.client.colour.BlockColours;
-import com.worive.client.colour.TexturePattern;
+import com.worive.colorpicker.client.colour.BlockColours;
+import com.worive.colorpicker.client.colour.TexturePattern;
 
 public final class PickerSettings {
 

@@ -14,7 +14,7 @@ ColorPicker is a client-side mod for Minecraft 1.7.10 that finds blocks by colou
 
 ## Development
 
-Run `./gradlew build` to compile, check, and package the mod.
+Run `./gradlew build` to compile, check, and package the mod. Java sources live under `com.worive.colorpicker`.
 
 - `ColorPickerMod` is the Forge entry point and owns the client session.
 - `client/colour` contains block matching and gradient generation. Texture sampling and block shape checks live alongside the colour index.

@@ -1,4 +1,4 @@
-package com.worive;
+package com.worive.colorpicker;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
@@ -8,13 +8,13 @@ import net.minecraft.util.MovingObjectPosition;
 
 import org.lwjgl.input.Keyboard;
 
-import com.worive.client.colour.BlockColours;
-import com.worive.client.colour.Gradient;
-import com.worive.client.gui.GradientScreen;
-import com.worive.client.gui.NeiHoverHandler;
-import com.worive.client.gui.PickerColour;
-import com.worive.client.gui.PickerScreen;
-import com.worive.client.gui.PickerSettings;
+import com.worive.colorpicker.client.colour.BlockColours;
+import com.worive.colorpicker.client.colour.Gradient;
+import com.worive.colorpicker.client.gui.GradientScreen;
+import com.worive.colorpicker.client.gui.NeiHoverHandler;
+import com.worive.colorpicker.client.gui.PickerColour;
+import com.worive.colorpicker.client.gui.PickerScreen;
+import com.worive.colorpicker.client.gui.PickerSettings;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;

@@ -1,4 +1,4 @@
-package com.worive.client.gui;
+package com.worive.colorpicker.client.gui;
 
 import java.util.Arrays;
 import java.util.List;
@@ -10,9 +10,9 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-import com.worive.client.colour.BlockColours;
-import com.worive.client.colour.Gradient;
-import com.worive.client.colour.TexturePattern;
+import com.worive.colorpicker.client.colour.BlockColours;
+import com.worive.colorpicker.client.colour.Gradient;
+import com.worive.colorpicker.client.colour.TexturePattern;
 
 public final class GradientScreen extends ToolScreen {
 

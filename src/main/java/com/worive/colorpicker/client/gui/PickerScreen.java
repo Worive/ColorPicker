@@ -1,4 +1,4 @@
-package com.worive.client.gui;
+package com.worive.colorpicker.client.gui;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,10 +21,10 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-import com.worive.client.colour.BlockColours;
-import com.worive.client.colour.ColourMath;
-import com.worive.client.colour.TexturePattern;
-import com.worive.client.gui.PickerSettings.Tolerance;
+import com.worive.colorpicker.client.colour.BlockColours;
+import com.worive.colorpicker.client.colour.ColourMath;
+import com.worive.colorpicker.client.colour.TexturePattern;
+import com.worive.colorpicker.client.gui.PickerSettings.Tolerance;
 
 public final class PickerScreen extends ToolScreen {
 

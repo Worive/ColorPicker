@@ -1,4 +1,4 @@
-package com.worive.client.gui;
+package com.worive.colorpicker.client.gui;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;

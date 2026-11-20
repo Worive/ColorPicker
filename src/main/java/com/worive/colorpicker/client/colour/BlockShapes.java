@@ -1,4 +1,4 @@
-package com.worive.client.colour;
+package com.worive.colorpicker.client.colour;
 
 import java.util.ArrayList;
 import java.util.List;
