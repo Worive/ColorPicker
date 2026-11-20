@@ -21,9 +21,9 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-import com.worive.colorpicker.client.colour.BlockColours;
-import com.worive.colorpicker.client.colour.ColourMath;
-import com.worive.colorpicker.client.colour.TexturePattern;
+import com.worive.colorpicker.client.color.BlockColors;
+import com.worive.colorpicker.client.color.ColorMath;
+import com.worive.colorpicker.client.color.TexturePattern;
 import com.worive.colorpicker.client.gui.PickerSettings.Tolerance;
 
 public final class PickerScreen extends ToolScreen {
@@ -60,12 +60,12 @@ public final class PickerScreen extends ToolScreen {
     private static final String[] CHANNEL_NAMES = { "R", "G", "B", "Hue", "Sat", "Bri" };
     private static final int DRAG_SV = 6, DRAG_HUE = 7, DRAG_SCROLL = 8, DRAG_TOLERANCE = 9, DRAG_PATTERN = 10;
 
-    private final BlockColours colours;
+    private final BlockColors colors;
     private final PickerSettings settings;
-    private final PickerColour colour;
+    private final PickerColor color;
     private final MovingObjectPosition worldTarget;
     private final GuiTextField[] fields = new GuiTextField[7];
-    private List<BlockColours.Entry> matches = Collections.emptyList();
+    private List<BlockColors.Entry> matches = Collections.emptyList();
     private int rankedRgb = -1, rankedFilters = -1;
     private long rankedRevision = -1;
     private Tolerance rankedTolerance;
@@ -81,12 +81,12 @@ public final class PickerScreen extends ToolScreen {
     private String notice = "";
     private int noticeTicks;
 
-    public PickerScreen(GuiScreen parent, BlockColours colours, PickerSettings settings, PickerColour colour,
+    public PickerScreen(GuiScreen parent, BlockColors colors, PickerSettings settings, PickerColor color,
         MovingObjectPosition worldTarget, int openKey, Consumer<Boolean> openTool) {
         super(parent, openKey, openTool, false, WIDTH, HEIGHT);
-        this.colours = colours;
+        this.colors = colors;
         this.settings = settings;
-        this.colour = colour;
+        this.color = color;
         this.worldTarget = worldTarget;
     }
 
@@ -139,7 +139,7 @@ public final class PickerScreen extends ToolScreen {
         updateResults();
         int x = localX(mouseX), y = localY(mouseY);
         beginPanel("ColorPicker", x, y);
-        drawColourControls(x, y);
+        drawColorControls(x, y);
         drawFilters(FILTER_X, FILTER_Y, settings.filters(), x, y);
         Tolerance tolerance = settings.tolerance();
         drawSteppedSlider(
@@ -169,43 +169,43 @@ public final class PickerScreen extends ToolScreen {
     }
 
     private void updateResults() {
-        int rgb = colour.rgb();
+        int rgb = color.rgb();
         int filters = settings.filters();
         Tolerance tolerance = settings.tolerance();
         boolean queryChanged = rankedRgb != rgb || rankedFilters != filters || rankedTolerance != tolerance;
-        if (queryChanged || rankedRevision != colours.revision()) {
-            matches = colours.closest(rgb, filters, MATCH_LIMIT, tolerance.distanceSquared);
+        if (queryChanged || rankedRevision != colors.revision()) {
+            matches = colors.closest(rgb, filters, MATCH_LIMIT, tolerance.distanceSquared);
             firstRow = queryChanged ? 0 : Math.min(firstRow, lastRow());
             rankedRgb = rgb;
             rankedFilters = filters;
             rankedTolerance = tolerance;
-            rankedRevision = colours.revision();
+            rankedRevision = colors.revision();
         }
     }
 
-    private void drawColourControls(int x, int y) {
+    private void drawColorControls(int x, int y) {
         frame(SV_X, SV_Y, SV_W, SV_H, SLOT_GREY, true);
-        int hueRgb = ColourMath.hsb(colour.hue(), 1, 1);
+        int hueRgb = ColorMath.hsb(color.hue(), 1, 1);
         gradient(SV_X + 1, SV_Y + 1, SV_W - 2, SV_H - 2, 0xffffff, hueRgb, 0xffffff, hueRgb);
         drawGradientRect(SV_X + 1, SV_Y + 1, SV_X + SV_W - 1, SV_Y + SV_H - 1, 0, 0xff000000);
-        int saturationMarker = SV_X + 1 + Math.round(colour.saturation() * (SV_W - 3));
-        int brightnessMarker = SV_Y + 1 + Math.round((1 - colour.brightness()) * (SV_H - 3));
+        int saturationMarker = SV_X + 1 + Math.round(color.saturation() * (SV_W - 3));
+        int brightnessMarker = SV_Y + 1 + Math.round((1 - color.brightness()) * (SV_H - 3));
         outline(saturationMarker - 3, brightnessMarker - 3, 7, 7, 0xffffffff, 0xff181818);
         drawRect(
             saturationMarker - 1,
             brightnessMarker - 1,
             saturationMarker + 2,
             brightnessMarker + 2,
-            solid(colour.rgb()));
+            solid(color.rgb()));
 
         frame(HUE_X, SV_Y, HUE_W, SV_H, SLOT_GREY, true);
         for (int i = 0; i < 6; i++) {
             int from = SV_Y + 1 + i * (SV_H - 2) / 6;
             int to = SV_Y + 1 + (i + 1) * (SV_H - 2) / 6;
-            int start = ColourMath.hsb(i / 6f, 1, 1), end = ColourMath.hsb((i + 1) / 6f, 1, 1);
+            int start = ColorMath.hsb(i / 6f, 1, 1), end = ColorMath.hsb((i + 1) / 6f, 1, 1);
             gradient(HUE_X + 1, from, HUE_W - 2, to - from, start, start, end, end);
         }
-        int hueMarker = SV_Y + 1 + Math.round(colour.hue() * (SV_H - 3));
+        int hueMarker = SV_Y + 1 + Math.round(color.hue() * (SV_H - 3));
         outline(HUE_X - 1, hueMarker - 1, HUE_W + 2, 3, 0xffffffff, 0xff181818);
 
         outline(
@@ -213,7 +213,7 @@ public final class PickerScreen extends ToolScreen {
             SWATCH_Y,
             SWATCH_W,
             SLOT,
-            solid(colour.rgb()),
+            solid(color.rgb()),
             inside(x, y, SV_X, SWATCH_Y, SWATCH_W, SLOT) ? LABEL : MUTED);
         drawInventorySlot(EYE_X, SWATCH_Y);
         if (sampled == null) {
@@ -225,8 +225,8 @@ public final class PickerScreen extends ToolScreen {
         drawField(HEX_FIELD, HEX_X, SWATCH_Y, HEX_W, SLOT);
 
         fontRendererObj.drawString("Channels", SV_X, MODE_Y + 3, LABEL);
-        drawChannelMode("RGB", RGB_X, !colour.hsbChannels, x, y);
-        drawChannelMode("HSB", HSB_X, colour.hsbChannels, x, y);
+        drawChannelMode("RGB", RGB_X, !color.hsbChannels, x, y);
+        drawChannelMode("HSB", HSB_X, color.hsbChannels, x, y);
 
         int first = firstChannel();
         for (int i = first; i < first + CHANNELS_PER_MODE; i++) {
@@ -251,7 +251,7 @@ public final class PickerScreen extends ToolScreen {
     }
 
     private int firstChannel() {
-        return colour.hsbChannels ? CHANNELS_PER_MODE : 0;
+        return color.hsbChannels ? CHANNELS_PER_MODE : 0;
     }
 
     private static int channelY(int channel) {
@@ -265,14 +265,14 @@ public final class PickerScreen extends ToolScreen {
             for (int i = 0; i < 6; i++) {
                 int from = SLIDER_X + 1 + i * railWidth / 6;
                 int to = SLIDER_X + 1 + (i + 1) * railWidth / 6;
-                int start = ColourMath.hsb(i / 6f, 1, 1), end = ColourMath.hsb((i + 1) / 6f, 1, 1);
+                int start = ColorMath.hsb(i / 6f, 1, 1), end = ColorMath.hsb((i + 1) / 6f, 1, 1);
                 gradient(from, y + 1, to - from, CHANNEL_H - 2, start, end, start, end);
             }
         } else {
-            int start = colour.channelColour(channel, 0), end = colour.channelColour(channel, 1);
+            int start = color.channelColor(channel, 0), end = color.channelColor(channel, 1);
             gradient(SLIDER_X + 1, y + 1, railWidth, CHANNEL_H - 2, start, end, start, end);
         }
-        int thumbX = SLIDER_X + SLIDER_INSET + Math.round(colour.value(channel) * SLIDER_RANGE) - 3;
+        int thumbX = SLIDER_X + SLIDER_INSET + Math.round(color.value(channel) * SLIDER_RANGE) - 3;
         boolean hovered = dragControl == channel || inside(mouseX, mouseY, SLIDER_X, y, SLIDER_W, CHANNEL_H);
         drawButtonSkin(thumbX, y, 7, CHANNEL_H, hovered ? 2 : 1);
     }
@@ -280,8 +280,8 @@ public final class PickerScreen extends ToolScreen {
     private void drawField(int i, int x, int y, int w, int h) {
         GuiTextField field = fields[i];
         boolean focused = field.isFocused();
-        boolean invalid = focused && (i == HEX_FIELD ? ColourMath.parseHex(field.getText()) == null
-            : PickerColour.parseChannel(field.getText(), i) == null);
+        boolean invalid = focused && (i == HEX_FIELD ? ColorMath.parseHex(field.getText()) == null
+            : PickerColor.parseChannel(field.getText(), i) == null);
         outline(x, y, w, h, 0xff202020, invalid ? 0xffc04444 : focused ? 0xffeeeeee : 0xff696969);
         field.drawTextBox();
     }
@@ -355,18 +355,18 @@ public final class PickerScreen extends ToolScreen {
         int match = matchAt(x, y);
         int hotbar = hotbarAt(x, y);
         if (match >= 0 && match < matches.size()) {
-            BlockColours.Entry entry = matches.get(match);
+            BlockColors.Entry entry = matches.get(match);
             text = Arrays.asList(
                 entry.stack.getDisplayName(),
-                EnumChatFormatting.GRAY + ColourMath.hex(entry.rgb),
+                EnumChatFormatting.GRAY + ColorMath.hex(entry.rgb),
                 creative() ? "Middle-click to take one item" : "Click to sample");
         } else if (eyedropperAt(x, y)) {
             text = Arrays
                 .asList("Eyedropper", "Drop an item to sample", "Right-click to sample the block you aimed at");
         } else if (inside(x, y, SV_X, SWATCH_Y, SWATCH_W, SLOT)) {
-            text = Arrays.asList(ColourMath.hex(colour.rgb()), "Click to copy hex");
+            text = Arrays.asList(ColorMath.hex(color.rgb()), "Click to copy hex");
         } else if (dragControl != DRAG_TOLERANCE && TOLERANCE_SLIDER.contains(x, y)) {
-            text = Arrays.asList("Maximum colour difference", "Any on the left, Strict on the right");
+            text = Arrays.asList("Maximum color difference", "Any on the left, Strict on the right");
         } else if (dragControl != DRAG_PATTERN && PATTERN_SLIDER.contains(x, y)) {
             text = PATTERN_TOOLTIP;
         } else if (inside(x, y, TRASH_X, HOTBAR_Y, SLOT, SLOT)) {
@@ -428,7 +428,7 @@ public final class PickerScreen extends ToolScreen {
         int match = matchAt(x, y);
         int hotbar = hotbarAt(x, y);
         if (match >= 0 && match < matches.size()) {
-            BlockColours.Entry entry = matches.get(match);
+            BlockColors.Entry entry = matches.get(match);
             if (button == 1 || !creative()) {
                 sample(entry.stack);
             } else if (button == 2) {
@@ -475,11 +475,11 @@ public final class PickerScreen extends ToolScreen {
             return;
         }
         if (inside(x, y, RGB_X, MODE_Y, MODE_W, MODE_H)) {
-            colour.hsbChannels = false;
+            color.hsbChannels = false;
             return;
         }
         if (inside(x, y, HSB_X, MODE_Y, MODE_W, MODE_H)) {
-            colour.hsbChannels = true;
+            color.hsbChannels = true;
             return;
         }
         boolean tolerance = TOLERANCE_SLIDER.contains(x, y);
@@ -560,7 +560,7 @@ public final class PickerScreen extends ToolScreen {
             return;
         }
         if (key == Keyboard.KEY_TAB) {
-            tabColourControls(focused);
+            tabColorControls(focused);
             return;
         }
         if (buttonFocus == TOLERANCE_FOCUS || buttonFocus == PATTERN_FOCUS) {
@@ -585,15 +585,15 @@ public final class PickerScreen extends ToolScreen {
         } else if (buttonFocus == MODE_FOCUS) {
             switch (key) {
                 case Keyboard.KEY_LEFT:
-                    colour.hsbChannels = false;
+                    color.hsbChannels = false;
                     return;
                 case Keyboard.KEY_RIGHT:
-                    colour.hsbChannels = true;
+                    color.hsbChannels = true;
                     return;
                 case Keyboard.KEY_RETURN:
                 case Keyboard.KEY_NUMPADENTER:
                 case Keyboard.KEY_SPACE:
-                    colour.hsbChannels = !colour.hsbChannels;
+                    color.hsbChannels = !color.hsbChannels;
                     return;
                 default:
                     break;
@@ -605,14 +605,14 @@ public final class PickerScreen extends ToolScreen {
                 syncFields();
             } else if (inputAllowed(typed, focused) && editField(fields[focused], editCharacter(typed, key), key)) {
                 if (focused == HEX_FIELD) {
-                    Integer rgb = ColourMath.parseHex(fields[focused].getText());
+                    Integer rgb = ColorMath.parseHex(fields[focused].getText());
                     if (rgb != null) {
-                        colour.setRgb(rgb);
+                        color.setRgb(rgb);
                     }
                 } else {
-                    Float value = PickerColour.parseChannel(fields[focused].getText(), focused);
+                    Float value = PickerColor.parseChannel(fields[focused].getText(), focused);
                     if (value != null) {
-                        colour.setChannel(focused, value);
+                        color.setChannel(focused, value);
                     }
                 }
                 syncFields();
@@ -634,7 +634,7 @@ public final class PickerScreen extends ToolScreen {
         super.keyTyped(typed, key);
     }
 
-    private void tabColourControls(int focused) {
+    private void tabColorControls(int focused) {
         int first = firstChannel();
         List<Integer> order = Arrays
             .asList(HEX_FIELD, MODE_FOCUS, first, first + 1, first + 2, TOLERANCE_FOCUS, PATTERN_FOCUS);
@@ -702,11 +702,11 @@ public final class PickerScreen extends ToolScreen {
             return;
         }
         if (dragControl == DRAG_SV) {
-            colour.setHsb(colour.hue(), fraction(x, SV_X + 1, SV_W - 3), 1 - fraction(y, SV_Y + 1, SV_H - 3));
+            color.setHsb(color.hue(), fraction(x, SV_X + 1, SV_W - 3), 1 - fraction(y, SV_Y + 1, SV_H - 3));
         } else if (dragControl == DRAG_HUE) {
-            colour.setHsb(fraction(y, SV_Y + 1, SV_H - 3), colour.saturation(), colour.brightness());
+            color.setHsb(fraction(y, SV_Y + 1, SV_H - 3), color.saturation(), color.brightness());
         } else if (dragControl >= 0) {
-            colour.setChannel(dragControl, fraction(x, SLIDER_X + SLIDER_INSET, SLIDER_RANGE));
+            color.setChannel(dragControl, fraction(x, SLIDER_X + SLIDER_INSET, SLIDER_RANGE));
         } else {
             return;
         }
@@ -716,7 +716,7 @@ public final class PickerScreen extends ToolScreen {
     private void syncFields() {
         for (int i = 0; i < fields.length; i++) {
             if (!fields[i].isFocused()) {
-                fields[i].setText(i == HEX_FIELD ? ColourMath.hex(colour.rgb()) : colour.channelText(i));
+                fields[i].setText(i == HEX_FIELD ? ColorMath.hex(color.rgb()) : color.channelText(i));
             }
         }
     }
@@ -742,17 +742,17 @@ public final class PickerScreen extends ToolScreen {
     private void sample(ItemStack stack) {
         Integer rgb;
         try {
-            rgb = colours.sample(stack);
+            rgb = colors.sample(stack);
         } catch (RuntimeException failure) {
             LOG.debug("Could not sample item", failure);
             rgb = null;
         }
         if (rgb != null) {
             sampled = stack.copy();
-            colour.setRgb(rgb);
+            color.setRgb(rgb);
             syncFields();
         } else {
-            notifyUser("No colour found");
+            notifyUser("No color found");
         }
     }
 
@@ -765,7 +765,7 @@ public final class PickerScreen extends ToolScreen {
         Block block = mc.theWorld.getBlock(x, y, z);
         Integer rgb;
         try {
-            rgb = colours
+            rgb = colors
                 .sample(block, mc.theWorld.getBlockMetadata(x, y, z), block.colorMultiplier(mc.theWorld, x, y, z));
         } catch (RuntimeException failure) {
             LOG.debug("Could not sample block in world", failure);
@@ -773,14 +773,14 @@ public final class PickerScreen extends ToolScreen {
         }
         if (rgb != null) {
             sampled = null;
-            colour.setRgb(rgb);
+            color.setRgb(rgb);
             syncFields();
         } else {
-            notifyUser("No colour found");
+            notifyUser("No color found");
         }
     }
 
-    private void takeItem(BlockColours.Entry entry) {
+    private void takeItem(BlockColors.Entry entry) {
         int slot = mc.thePlayer.inventory.getFirstEmptyStack();
         if (slot < 0) {
             notifyUser("Inventory full");
@@ -828,8 +828,8 @@ public final class PickerScreen extends ToolScreen {
     }
 
     private void copyHex() {
-        setClipboardString(ColourMath.hex(colour.rgb()));
-        notifyUser("Copied " + ColourMath.hex(colour.rgb()));
+        setClipboardString(ColorMath.hex(color.rgb()));
+        notifyUser("Copied " + ColorMath.hex(color.rgb()));
     }
 
     private void notifyUser(String message) {
@@ -919,11 +919,11 @@ public final class PickerScreen extends ToolScreen {
         return 0xff000000 | rgb;
     }
 
-    private static void drawDropper(int x, int y, int colour) {
+    private static void drawDropper(int x, int y, int color) {
         for (int i = 0; i < 8; i++) {
-            drawRect(x + i, y + 8 - i, x + i + 2, y + 9 - i, colour);
+            drawRect(x + i, y + 8 - i, x + i + 2, y + 9 - i, color);
         }
-        drawRect(x + 6, y, x + 9, y + 2, colour);
-        drawRect(x + 5, y + 2, x + 9, y + 3, colour);
+        drawRect(x + 6, y, x + 9, y + 2, color);
+        drawRect(x + 5, y + 2, x + 9, y + 3, color);
     }
 }

@@ -1,9 +1,9 @@
-package com.worive.colorpicker.client.colour;
+package com.worive.colorpicker.client.color;
 
 import java.awt.Color;
 import java.util.Locale;
 
-public final class ColourMath {
+public final class ColorMath {
 
     private static final double[] LINEAR = new double[256];
 
@@ -14,7 +14,7 @@ public final class ColourMath {
         }
     }
 
-    private ColourMath() {}
+    private ColorMath() {}
 
     static int rgb(int red, int green, int blue) {
         return (red << 16) | (green << 8) | blue;

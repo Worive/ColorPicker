@@ -1,4 +1,4 @@
-package com.worive.colorpicker.client.colour;
+package com.worive.colorpicker.client.color;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,7 +17,7 @@ public final class Gradient {
     private static final Logger LOG = LogManager.getLogger("ColorPicker");
 
     private final ItemStack[] inputs = new ItemStack[SLOTS];
-    private final List<List<BlockColours.Entry>> alternatives = new ArrayList<>(SLOTS);
+    private final List<List<BlockColors.Entry>> alternatives = new ArrayList<>(SLOTS);
     private final int[] selected = new int[SLOTS];
     private final int[] manualRanks = new int[SLOTS];
     private boolean dirty = true;
@@ -36,7 +36,7 @@ public final class Gradient {
     }
 
     public ItemStack output(int i) {
-        List<BlockColours.Entry> candidates = alternatives.get(i);
+        List<BlockColors.Entry> candidates = alternatives.get(i);
         return candidates.isEmpty() ? inputs[i] : candidates.get(rank(i)).stack;
     }
 
@@ -57,8 +57,8 @@ public final class Gradient {
         return true;
     }
 
-    public boolean setInput(int i, ItemStack stack, BlockColours colours) {
-        if (stack != null && sample(colours, stack) == null) {
+    public boolean setInput(int i, ItemStack stack, BlockColors colors) {
+        if (stack != null && sample(colors, stack) == null) {
             return false;
         }
         inputs[i] = stack == null ? null : stack.copy();
@@ -69,8 +69,8 @@ public final class Gradient {
         return true;
     }
 
-    public void update(BlockColours colours, int filters) {
-        if (!dirty && lastFilters == filters && lastRevision == colours.revision()) {
+    public void update(BlockColors colors, int filters) {
+        if (!dirty && lastFilters == filters && lastRevision == colors.revision()) {
             return;
         }
         if (dirty) {
@@ -87,17 +87,17 @@ public final class Gradient {
             if (inputs[i] == null) {
                 continue;
             }
-            BlockColours.Entry entry = sample(colours, inputs[i]);
+            BlockColors.Entry entry = sample(colors, inputs[i]);
             double[] to = entry == null ? null : entry.lab;
             if (from != null && to != null) {
                 for (int slot = fromSlot + 1; slot < i; slot++) {
                     double progress = (slot - fromSlot) / (double) (i - fromSlot);
                     double[] target = interpolate(from, to, progress);
-                    List<BlockColours.Entry> candidates = colours.closest(target, filters, CANDIDATES);
+                    List<BlockColors.Entry> candidates = colors.closest(target, filters, CANDIDATES);
                     alternatives.set(slot, candidates);
                     if (candidates.size() > 1) {
-                        runnerUpCosts[slot] = ColourMath.distance(candidates.get(1).lab, target)
-                            - ColourMath.distance(candidates.get(0).lab, target);
+                        runnerUpCosts[slot] = ColorMath.distance(candidates.get(1).lab, target)
+                            - ColorMath.distance(candidates.get(0).lab, target);
                     }
                 }
             }
@@ -107,7 +107,7 @@ public final class Gradient {
         selectDefaults(runnerUpCosts);
         dirty = false;
         lastFilters = filters;
-        lastRevision = colours.revision();
+        lastRevision = colors.revision();
     }
 
     private void selectDefaults(double[] runnerUpCosts) {
@@ -118,7 +118,7 @@ public final class Gradient {
 
         // Score each suffix so a runner-up can avoid repeats on either side of its slot.
         for (int i = SLOTS - 1; i >= 0; i--) {
-            List<BlockColours.Entry> candidates = alternatives.get(i);
+            List<BlockColors.Entry> candidates = alternatives.get(i);
             selected[i] = Math.min(Math.max(manualRanks[i], 0), candidates.size() - 1);
             ItemStack[] options = manualRanks[i] < 0 && candidates.size() > 1
                 ? new ItemStack[] { output(i), candidates.get(1).stack }
@@ -160,9 +160,9 @@ public final class Gradient {
         return a != null && b != null && a.isItemEqual(b) && ItemStack.areItemStackTagsEqual(a, b);
     }
 
-    private static BlockColours.Entry sample(BlockColours colours, ItemStack stack) {
+    private static BlockColors.Entry sample(BlockColors colors, ItemStack stack) {
         try {
-            return colours.sampleBlock(stack);
+            return colors.sampleBlock(stack);
         } catch (RuntimeException failure) {
             LOG.debug("Could not sample gradient input", failure);
             return null;

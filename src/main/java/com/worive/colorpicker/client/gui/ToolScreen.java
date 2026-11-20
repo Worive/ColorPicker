@@ -20,7 +20,7 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-import com.worive.colorpicker.client.colour.BlockColours;
+import com.worive.colorpicker.client.color.BlockColors;
 
 import codechicken.nei.api.INEIGuiHandler;
 import cpw.mods.fml.common.Loader;
@@ -43,34 +43,34 @@ abstract class ToolScreen extends GuiContainer implements INEIGuiHandler {
     private static final int FILTER_FIRST_ROW = 13, FILTER_ROW_H = 12, FILTER_BOX = 9;
     private static final int NEI_MIN_SIDEBAR_WIDTH = 81;
     private static final Filter[] FILTERS = {
-        new Filter(BlockColours.FULL, "Full cubes", "Shows full 1x1x1 blocks", "Also allows partial blocks"),
+        new Filter(BlockColors.FULL, "Full cubes", "Shows full 1x1x1 blocks", "Also allows partial blocks"),
         new Filter(
-            BlockColours.SOLID,
+            BlockColors.SOLID,
             "Collidable",
             "Shows blocks with collision",
             "Also allows blocks without collision"),
         new Filter(
-            BlockColours.LOW_CONTRAST,
+            BlockColors.LOW_CONTRAST,
             "Low contrast",
             "Hides textures with strongly contrasting patches",
             "Allows textures with strongly contrasting patches"),
         new Filter(
-            BlockColours.SAME_TEXTURE,
+            BlockColors.SAME_TEXTURE,
             "One texture",
             "Shows blocks with the same texture on all faces",
             "Also allows blocks with different face textures"),
         new Filter(
-            BlockColours.NO_TILE_ENTITIES,
+            BlockColors.NO_TILE_ENTITIES,
             "No tile entities",
             "Hides blocks with tile entities",
             "Allows blocks with tile entities"),
         new Filter(
-            BlockColours.OPAQUE,
+            BlockColors.OPAQUE,
             "Opaque",
             "Shows blocks with opaque textures",
             "Also allows transparent textures"),
         new Filter(
-            BlockColours.NO_FALLING,
+            BlockColors.NO_FALLING,
             "No falling",
             "Hides blocks that use Minecraft's standard falling behavior",
             "Allows blocks with standard falling behavior") };

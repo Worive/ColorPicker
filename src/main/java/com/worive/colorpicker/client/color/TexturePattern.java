@@ -1,4 +1,4 @@
-package com.worive.colorpicker.client.colour;
+package com.worive.colorpicker.client.color;
 
 import java.awt.image.BufferedImage;
 
@@ -13,7 +13,7 @@ public enum TexturePattern {
     public static final int FILTERS = SMOOTH.bit | PATTERNED.bit | OUTLINED.bit;
     private static final double BORDER_CONTRAST = 0.03;
     private static final double BEVEL_CONTRAST = 0.14;
-    private static final double SEAM_COLOUR_TOLERANCE = 0.1;
+    private static final double SEAM_COLOR_TOLERANCE = 0.1;
     private static final int FAINT_SEAM = 1;
     private static final int CLEAR_SEAM = 2;
 
@@ -102,7 +102,7 @@ public enum TexturePattern {
                     moreOpaque++;
                 }
                 opacityDifference += opacity;
-                double contrast = colourContrast(outer, inner);
+                double contrast = colorContrast(outer, inner);
                 if (contrast >= BORDER_CONTRAST) {
                     lighter++;
                 } else if (contrast <= -BORDER_CONTRAST) {
@@ -140,10 +140,10 @@ public enum TexturePattern {
                 double lastDifference = contrast(last, pixel(image, top, rows, seam - 1, offset));
                 firstShift += firstDifference;
                 lastShift += lastDifference;
-                if (Math.abs(firstDifference) <= SEAM_COLOUR_TOLERANCE) {
+                if (Math.abs(firstDifference) <= SEAM_COLOR_TOLERANCE) {
                     matchingFirst++;
                 }
-                if (Math.abs(lastDifference) <= SEAM_COLOUR_TOLERANCE) {
+                if (Math.abs(lastDifference) <= SEAM_COLOR_TOLERANCE) {
                     matchingLast++;
                 }
             }
@@ -235,15 +235,15 @@ public enum TexturePattern {
 
     private static double contrast(int first, int second) {
         double opacityDifference = ((first >>> 24) - (second >>> 24)) / 255.0;
-        double colour = colourContrast(first, second);
-        return Math.abs(colour) > Math.abs(opacityDifference) ? colour : opacityDifference;
+        double color = colorContrast(first, second);
+        return Math.abs(color) > Math.abs(opacityDifference) ? color : opacityDifference;
     }
 
-    private static double colourContrast(int first, int second) {
+    private static double colorContrast(int first, int second) {
         double opacity = Math.min(first >>> 24, second >>> 24) / 255.0;
         double luma = brightness(first) - brightness(second);
-        double redChroma = (ColourMath.channel(first, 0) - ColourMath.channel(second, 0)) / 255.0 - luma;
-        double blueChroma = (ColourMath.channel(first, 2) - ColourMath.channel(second, 2)) / 255.0 - luma;
+        double redChroma = (ColorMath.channel(first, 0) - ColorMath.channel(second, 0)) / 255.0 - luma;
+        double blueChroma = (ColorMath.channel(first, 2) - ColorMath.channel(second, 2)) / 255.0 - luma;
         double chroma = Math.abs(redChroma) > Math.abs(blueChroma) ? redChroma : blueChroma;
         return opacity * (Math.abs(luma) >= 0.7 * Math.abs(chroma) ? luma : 0.7 * chroma);
     }
@@ -253,7 +253,7 @@ public enum TexturePattern {
     }
 
     private static double brightness(int rgb) {
-        return (0.2126 * ColourMath.channel(rgb, 0) + 0.7152 * ColourMath.channel(rgb, 1)
-            + 0.0722 * ColourMath.channel(rgb, 2)) / 255;
+        return (0.2126 * ColorMath.channel(rgb, 0) + 0.7152 * ColorMath.channel(rgb, 1)
+            + 0.0722 * ColorMath.channel(rgb, 2)) / 255;
     }
 }

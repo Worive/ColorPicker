@@ -2,7 +2,7 @@
   {
     "modid": "${modId}",
     "name": "${modName}",
-    "description": "Find Minecraft blocks by colour or sample the colour of a block.",
+    "description": "Find Minecraft blocks by color or sample the color of a block.",
     "version": "${modVersion}",
     "mcversion": "${minecraftVersion}"
   }

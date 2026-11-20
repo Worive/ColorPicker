@@ -10,9 +10,9 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-import com.worive.colorpicker.client.colour.BlockColours;
-import com.worive.colorpicker.client.colour.Gradient;
-import com.worive.colorpicker.client.colour.TexturePattern;
+import com.worive.colorpicker.client.color.BlockColors;
+import com.worive.colorpicker.client.color.Gradient;
+import com.worive.colorpicker.client.color.TexturePattern;
 
 public final class GradientScreen extends ToolScreen {
 
@@ -29,7 +29,7 @@ public final class GradientScreen extends ToolScreen {
     private static final int APPLY_W = 95, APPLY_X = WIDTH - PANEL_INSET - APPLY_W;
     private static final int REFRESH_Y = OUTPUT_Y + SLOT + 2, REFRESH_H = 12;
 
-    private final BlockColours colours;
+    private final BlockColors colors;
     private final PickerSettings settings;
     private final Gradient gradient;
     private ItemStack held;
@@ -40,10 +40,10 @@ public final class GradientScreen extends ToolScreen {
     private int pointerX, pointerY;
     private int noticeTicks;
 
-    public GradientScreen(GuiScreen parent, BlockColours colours, PickerSettings settings, Gradient gradient,
-        int openKey, Consumer<Boolean> openTool) {
+    public GradientScreen(GuiScreen parent, BlockColors colors, PickerSettings settings, Gradient gradient, int openKey,
+        Consumer<Boolean> openTool) {
         super(parent, openKey, openTool, true, WIDTH, HEIGHT);
-        this.colours = colours;
+        this.colors = colors;
         this.settings = settings;
         this.gradient = gradient;
     }
@@ -70,7 +70,7 @@ public final class GradientScreen extends ToolScreen {
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
-        gradient.update(colours, settings.filters());
+        gradient.update(colors, settings.filters());
         int x = localX(mouseX), y = localY(mouseY);
         pointerX = x;
         pointerY = y;
@@ -185,7 +185,7 @@ public final class GradientScreen extends ToolScreen {
             return;
         }
         patternFocused = false;
-        gradient.update(colours, settings.filters());
+        gradient.update(colors, settings.filters());
         int refresh = refreshAt(x, y);
         if (refresh >= 0 && button <= 1) {
             gradient.cycle(refresh, button == 0 ? 1 : -1);
@@ -195,13 +195,13 @@ public final class GradientScreen extends ToolScreen {
         if (input >= 0) {
             ItemStack stack = gradient.input(input);
             if (button == 1 || isShiftKeyDown()) {
-                gradient.setInput(input, null, colours);
+                gradient.setInput(input, null, colors);
             } else if (held != null) {
                 placeInput(input);
             } else if (stack != null) {
                 startHolding(stack, -1, x, y, button == 2);
                 if (button == 0) {
-                    gradient.setInput(input, null, colours);
+                    gradient.setInput(input, null, colors);
                 }
             }
             return;
@@ -345,7 +345,7 @@ public final class GradientScreen extends ToolScreen {
         if (slot < 0 || !creative()) {
             return false;
         }
-        if (!gradient.setInput(slot, stack, colours)) {
+        if (!gradient.setInput(slot, stack, colors)) {
             noticeTicks = 50;
             return false;
         }
@@ -355,7 +355,7 @@ public final class GradientScreen extends ToolScreen {
 
     private void placeInput(int slot) {
         ItemStack stack = Gradient.same(held, gradient.input(slot)) ? null : held;
-        if (gradient.setInput(slot, stack, colours)) {
+        if (gradient.setInput(slot, stack, colors)) {
             clearHeld();
         } else {
             noticeTicks = 50;

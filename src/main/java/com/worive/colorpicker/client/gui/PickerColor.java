@@ -2,9 +2,9 @@ package com.worive.colorpicker.client.gui;
 
 import java.util.Locale;
 
-import com.worive.colorpicker.client.colour.ColourMath;
+import com.worive.colorpicker.client.color.ColorMath;
 
-public final class PickerColour {
+public final class PickerColor {
 
     private static final float[] MAX = { 255, 255, 255, 360, 100, 100 };
 
@@ -12,7 +12,7 @@ public final class PickerColour {
     private float hue, saturation, brightness;
     boolean hsbChannels;
 
-    public PickerColour() {
+    public PickerColor() {
         setRgb(0x808080);
     }
 
@@ -34,7 +34,7 @@ public final class PickerColour {
 
     void setRgb(int rgb) {
         this.rgb = rgb;
-        float[] hsb = ColourMath.toHsb(rgb, hue);
+        float[] hsb = ColorMath.toHsb(rgb, hue);
         hue = hsb[0];
         saturation = hsb[1];
         brightness = hsb[2];
@@ -44,15 +44,15 @@ public final class PickerColour {
         this.hue = hue;
         this.saturation = saturation;
         this.brightness = brightness;
-        rgb = ColourMath.hsb(hue, saturation, brightness);
+        rgb = ColorMath.hsb(hue, saturation, brightness);
     }
 
-    int channelColour(int channel, float fraction) {
+    int channelColor(int channel, float fraction) {
         if (channel < 3) {
             int shift = 16 - channel * 8;
             return (rgb & ~(255 << shift)) | (Math.round(fraction * 255) << shift);
         }
-        return ColourMath.hsb(
+        return ColorMath.hsb(
             channel == 3 ? fraction : hue,
             channel == 4 ? fraction : saturation,
             channel == 5 ? fraction : brightness);
@@ -60,7 +60,7 @@ public final class PickerColour {
 
     void setChannel(int channel, float fraction) {
         if (channel < 3) {
-            setRgb(channelColour(channel, fraction));
+            setRgb(channelColor(channel, fraction));
         } else {
             setHsb(
                 channel == 3 ? fraction : hue,
@@ -78,7 +78,7 @@ public final class PickerColour {
             case 5:
                 return brightness;
             default:
-                return ColourMath.channel(rgb, index) / 255f;
+                return ColorMath.channel(rgb, index) / 255f;
         }
     }
 

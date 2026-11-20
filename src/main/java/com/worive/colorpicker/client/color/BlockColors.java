@@ -1,4 +1,4 @@
-package com.worive.colorpicker.client.colour;
+package com.worive.colorpicker.client.color;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +24,7 @@ import net.minecraft.item.ItemStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public final class BlockColours implements IResourceManagerReloadListener {
+public final class BlockColors implements IResourceManagerReloadListener {
 
     public static final int FULL = 1;
     public static final int SOLID = 2;
@@ -48,7 +48,7 @@ public final class BlockColours implements IResourceManagerReloadListener {
         .thenComparingInt(match -> match.order);
 
     private final Map<Item, List<Entry>> byItem = new IdentityHashMap<>();
-    private final TextureColours textures = new TextureColours();
+    private final TextureColors textures = new TextureColors();
     private final BlockShapes shapes = new BlockShapes();
     private List<Entry> entries;
     private long revision;
@@ -71,7 +71,7 @@ public final class BlockColours implements IResourceManagerReloadListener {
 
     /** Returns the closest blocks satisfying all selected flags within the squared Oklab distance. */
     public List<Entry> closest(int rgb, int filter, int limit, double maxDistanceSquared) {
-        return closest(ColourMath.lab(rgb), filter, limit, maxDistanceSquared);
+        return closest(ColorMath.lab(rgb), filter, limit, maxDistanceSquared);
     }
 
     private List<Entry> closest(double[] lab, int filter, int limit, double maxDistanceSquared) {
@@ -81,7 +81,7 @@ public final class BlockColours implements IResourceManagerReloadListener {
             if ((entry.flags & filter) != filter) {
                 continue;
             }
-            double distance = ColourMath.distance(entry.lab, lab);
+            double distance = ColorMath.distance(entry.lab, lab);
             if (distance > maxDistanceSquared || (nearest.size() == limit && distance > nearest.peek().distance)) {
                 continue;
             }
@@ -132,7 +132,7 @@ public final class BlockColours implements IResourceManagerReloadListener {
     }
 
     public Integer sample(Block block, int metadata, int tint) {
-        TextureColours.Faces faces = textures.faces(block, metadata, tint);
+        TextureColors.Faces faces = textures.faces(block, metadata, tint);
         return faces == null ? null : faces.rgb;
     }
 
@@ -197,7 +197,7 @@ public final class BlockColours implements IResourceManagerReloadListener {
     }
 
     private Entry readBlock(ItemStack stack, Block block, int metadata) {
-        TextureColours.Faces faces = textures.faces(block, metadata, block.getRenderColor(metadata));
+        TextureColors.Faces faces = textures.faces(block, metadata, block.getRenderColor(metadata));
         if (faces == null) {
             return null;
         }
@@ -240,7 +240,7 @@ public final class BlockColours implements IResourceManagerReloadListener {
             this.rgb = rgb;
             this.id = Item.itemRegistry.getNameForObject(stack.getItem());
             this.flags = flags;
-            this.lab = ColourMath.lab(rgb);
+            this.lab = ColorMath.lab(rgb);
         }
     }
 

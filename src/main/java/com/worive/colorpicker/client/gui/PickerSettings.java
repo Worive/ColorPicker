@@ -5,8 +5,8 @@ import java.io.File;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.common.config.Property;
 
-import com.worive.colorpicker.client.colour.BlockColours;
-import com.worive.colorpicker.client.colour.TexturePattern;
+import com.worive.colorpicker.client.color.BlockColors;
+import com.worive.colorpicker.client.color.TexturePattern;
 
 public final class PickerSettings {
 
@@ -31,7 +31,7 @@ public final class PickerSettings {
             "Enabled filters. Add the values for Full cubes (1), Collidable (2), Opaque (4), One texture (8), "
                 + "No tile entities (16), Low contrast (32), and No falling (64). "
                 + "For Pattern, add 128 for Smooth, 256 for Patterned, or 512 for Outlined.");
-        filters = enabledFilters.getInt(0) & BlockColours.ALL_FILTERS;
+        filters = enabledFilters.getInt(0) & BlockColors.ALL_FILTERS;
         if (Integer.bitCount(filters & TexturePattern.FILTERS) > 1) {
             filters &= ~TexturePattern.FILTERS;
             enabledFilters.set(filters);

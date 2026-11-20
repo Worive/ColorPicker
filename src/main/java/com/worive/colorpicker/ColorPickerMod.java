@@ -1,18 +1,24 @@
 package com.worive.colorpicker;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.MovingObjectPosition;
 
+import org.apache.logging.log4j.LogManager;
 import org.lwjgl.input.Keyboard;
 
-import com.worive.colorpicker.client.colour.BlockColours;
-import com.worive.colorpicker.client.colour.Gradient;
+import com.worive.colorpicker.client.color.BlockColors;
+import com.worive.colorpicker.client.color.Gradient;
 import com.worive.colorpicker.client.gui.GradientScreen;
 import com.worive.colorpicker.client.gui.NeiHoverHandler;
-import com.worive.colorpicker.client.gui.PickerColour;
+import com.worive.colorpicker.client.gui.PickerColor;
 import com.worive.colorpicker.client.gui.PickerScreen;
 import com.worive.colorpicker.client.gui.PickerSettings;
 
@@ -46,25 +52,50 @@ public final class ColorPickerMod {
     public static final class Client {
 
         private final Minecraft minecraft = Minecraft.getMinecraft();
-        // Keep the original key ID so Minecraft can load existing bindings from options.txt.
         private final KeyBinding open = new KeyBinding(
-            "key.colourpicker.open",
+            "key.colorpicker.open",
             Keyboard.KEY_G,
             "key.categories.colorpicker");
-        private final BlockColours colours = new BlockColours();
+        private final BlockColors colors = new BlockColors();
         private final PickerSettings settings = new PickerSettings(minecraft.mcDataDir);
-        private final PickerColour pickerColour = new PickerColour();
+        private final PickerColor pickerColor = new PickerColor();
         private final Gradient gradient = new Gradient();
 
         void register() {
             if (Loader.isModLoaded("NotEnoughItems")) {
                 NeiHoverHandler.register();
             }
+            loadLegacyKeyBinding();
             ClientRegistry.registerKeyBinding(open);
             FMLCommonHandler.instance()
                 .bus()
                 .register(this);
-            ((IReloadableResourceManager) minecraft.getResourceManager()).registerReloadListener(colours);
+            ((IReloadableResourceManager) minecraft.getResourceManager()).registerReloadListener(colors);
+        }
+
+        private void loadLegacyKeyBinding() {
+            File options = new File(minecraft.mcDataDir, "options.txt");
+            if (!options.isFile()) {
+                return;
+            }
+            // Forge reloads options after registration, so a saved value for the current key ID takes precedence.
+            String legacyKey = "key_key.colourpicker.open:";
+            try (BufferedReader reader = new BufferedReader(new FileReader(options))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith(legacyKey)) {
+                        try {
+                            open.setKeyCode(Integer.parseInt(line.substring(legacyKey.length())));
+                        } catch (NumberFormatException invalid) {
+                            LogManager.getLogger("ColorPicker")
+                                .debug("Could not parse the previous key binding", invalid);
+                        }
+                    }
+                }
+            } catch (IOException failure) {
+                LogManager.getLogger("ColorPicker")
+                    .debug("Could not read the previous key binding", failure);
+            }
         }
 
         @SubscribeEvent
@@ -78,14 +109,14 @@ public final class ColorPickerMod {
             int key = open.getKeyCode();
             if (showGradient) {
                 minecraft.displayGuiScreen(
-                    new GradientScreen(parent, colours, settings, gradient, key, other -> show(parent, target, other)));
+                    new GradientScreen(parent, colors, settings, gradient, key, other -> show(parent, target, other)));
             } else {
                 minecraft.displayGuiScreen(
                     new PickerScreen(
                         parent,
-                        colours,
+                        colors,
                         settings,
-                        pickerColour,
+                        pickerColor,
                         target,
                         key,
                         other -> show(parent, target, other)));

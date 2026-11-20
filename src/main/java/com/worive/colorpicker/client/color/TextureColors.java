@@ -1,4 +1,4 @@
-package com.worive.colorpicker.client.colour;
+package com.worive.colorpicker.client.color;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -15,12 +15,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.ResourceLocation;
 
-final class TextureColours {
+final class TextureColors {
 
     private static final int FIRST_HORIZONTAL_SIDE = 2;
     private static final double CONTRAST_DISTANCE_SQUARED = 0.18 * 0.18;
 
-    private final Map<ResourceLocation, PixelColour> textures = new HashMap<>();
+    private final Map<ResourceLocation, PixelColor> textures = new HashMap<>();
 
     void clearCache() {
         textures.clear();
@@ -29,7 +29,7 @@ final class TextureColours {
     Integer sampleItem(ItemStack stack) {
         Item item = stack.getItem();
         String folder = item.getSpriteNumber() == 0 ? "blocks" : "items";
-        PixelColour pixel = texture(item.getIconIndex(stack), folder);
+        PixelColor pixel = texture(item.getIconIndex(stack), folder);
         return pixel == null ? null : pixel.tint(item.getColorFromItemStack(stack, 0));
     }
 
@@ -41,7 +41,7 @@ final class TextureColours {
         String first = null;
         for (int side = 0; side < 6; side++) {
             IIcon icon = block.getIcon(side, metadata);
-            PixelColour pixels = texture(icon, "blocks");
+            PixelColor pixels = texture(icon, "blocks");
             if (pixels == null) {
                 opaque = false;
                 uniform = false;
@@ -59,23 +59,18 @@ final class TextureColours {
                 outlinedSides++;
             }
             int rgb = pixels.tint(tint);
-            red += ColourMath.channel(rgb, 0);
-            green += ColourMath.channel(rgb, 1);
-            blue += ColourMath.channel(rgb, 2);
+            red += ColorMath.channel(rgb, 0);
+            green += ColorMath.channel(rgb, 1);
+            blue += ColorMath.channel(rgb, 2);
             count++;
         }
         TexturePattern pattern = outlinedSides == 4 ? TexturePattern.OUTLINED
             : patterned ? TexturePattern.PATTERNED : TexturePattern.SMOOTH;
         return count == 0 ? null
-            : new Faces(
-                ColourMath.rgb(red / count, green / count, blue / count),
-                opaque,
-                uniform,
-                lowContrast,
-                pattern);
+            : new Faces(ColorMath.rgb(red / count, green / count, blue / count), opaque, uniform, lowContrast, pattern);
     }
 
-    private PixelColour texture(IIcon icon, String folder) {
+    private PixelColor texture(IIcon icon, String folder) {
         if (icon == null) {
             return null;
         }
@@ -89,7 +84,7 @@ final class TextureColours {
         return textures.get(path);
     }
 
-    private PixelColour readTexture(ResourceLocation path) {
+    private PixelColor readTexture(ResourceLocation path) {
         try (InputStream stream = Minecraft.getMinecraft()
             .getResourceManager()
             .getResource(path)
@@ -107,31 +102,31 @@ final class TextureColours {
                     int argb = image.getRGB(x, y);
                     int weight = argb >>> 24;
                     alpha += weight;
-                    red += ColourMath.channel(argb, 0) * weight;
-                    green += ColourMath.channel(argb, 1) * weight;
-                    blue += ColourMath.channel(argb, 2) * weight;
+                    red += ColorMath.channel(argb, 0) * weight;
+                    green += ColorMath.channel(argb, 1) * weight;
+                    blue += ColorMath.channel(argb, 2) * weight;
                     opaque &= weight == 255;
                 }
             }
             if (alpha == 0) {
                 return null;
             }
-            int rgb = ColourMath.rgb((int) (red / alpha), (int) (green / alpha), (int) (blue / alpha));
-            return new PixelColour(rgb, opaque, isLowContrast(image, rgb, alpha), TexturePattern.classify(image));
+            int rgb = ColorMath.rgb((int) (red / alpha), (int) (green / alpha), (int) (blue / alpha));
+            return new PixelColor(rgb, opaque, isLowContrast(image, rgb, alpha), TexturePattern.classify(image));
         } catch (IOException missingTexture) {
             return null;
         }
     }
 
     private static boolean isLowContrast(BufferedImage image, int averageRgb, long totalOpacity) {
-        double[] average = ColourMath.lab(averageRgb);
+        double[] average = ColorMath.lab(averageRgb);
         long contrastingOpacity = 0;
         long maxContrastingOpacity = totalOpacity / 16;
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 int argb = image.getRGB(x, y);
                 int weight = argb >>> 24;
-                if (weight != 0 && ColourMath.distance(ColourMath.lab(argb), average) > CONTRAST_DISTANCE_SQUARED) {
+                if (weight != 0 && ColorMath.distance(ColorMath.lab(argb), average) > CONTRAST_DISTANCE_SQUARED) {
                     contrastingOpacity += weight;
                     if (contrastingOpacity > maxContrastingOpacity) {
                         return false;
@@ -159,14 +154,14 @@ final class TextureColours {
         }
     }
 
-    private static final class PixelColour {
+    private static final class PixelColor {
 
         final int rgb;
         final boolean opaque;
         final boolean lowContrast;
         final TexturePattern pattern;
 
-        PixelColour(int rgb, boolean opaque, boolean lowContrast, TexturePattern pattern) {
+        PixelColor(int rgb, boolean opaque, boolean lowContrast, TexturePattern pattern) {
             this.rgb = rgb;
             this.opaque = opaque;
             this.lowContrast = lowContrast;
@@ -174,10 +169,10 @@ final class TextureColours {
         }
 
         int tint(int tint) {
-            return ColourMath.rgb(
-                ColourMath.channel(rgb, 0) * ColourMath.channel(tint, 0) / 255,
-                ColourMath.channel(rgb, 1) * ColourMath.channel(tint, 1) / 255,
-                ColourMath.channel(rgb, 2) * ColourMath.channel(tint, 2) / 255);
+            return ColorMath.rgb(
+                ColorMath.channel(rgb, 0) * ColorMath.channel(tint, 0) / 255,
+                ColorMath.channel(rgb, 1) * ColorMath.channel(tint, 1) / 255,
+                ColorMath.channel(rgb, 2) * ColorMath.channel(tint, 2) / 255);
         }
     }
 }
