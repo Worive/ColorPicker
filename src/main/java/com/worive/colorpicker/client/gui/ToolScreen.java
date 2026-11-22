@@ -134,7 +134,7 @@ abstract class ToolScreen extends GuiContainer implements INEIGuiHandler {
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         drawInventoryPanel();
         fontRendererObj.drawString(title, PANEL_INSET, 9, LABEL);
-        if (creative()) {
+        if (canOpenGradient()) {
             drawAction(
                 gradient ? "ColorPicker" : "Gradient Helper",
                 switchX,
@@ -203,7 +203,7 @@ abstract class ToolScreen extends GuiContainer implements INEIGuiHandler {
         super.mouseClicked(mouseX, mouseY, button);
         if (!neiDispatchedDrop && mc.currentScreen == this) {
             int x = localX(mouseX), y = localY(mouseY);
-            if (button == 0 && creative() && inside(x, y, switchX, SWITCH_Y, SWITCH_W, SWITCH_H)) {
+            if (button == 0 && canOpenGradient() && inside(x, y, switchX, SWITCH_Y, SWITCH_W, SWITCH_H)) {
                 openTool.accept(!gradient);
             } else {
                 clickPanel(x, y, button);
@@ -411,6 +411,10 @@ abstract class ToolScreen extends GuiContainer implements INEIGuiHandler {
 
     final boolean creative() {
         return mc.playerController != null && mc.playerController.isInCreativeMode();
+    }
+
+    final boolean canOpenGradient() {
+        return mc.isSingleplayer() || creative();
     }
 
     final void putInventory(int slot, ItemStack stack) {

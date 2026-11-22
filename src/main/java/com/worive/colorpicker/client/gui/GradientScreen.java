@@ -54,7 +54,7 @@ public final class GradientScreen extends ToolScreen {
         if (noticeTicks > 0) {
             noticeTicks--;
         }
-        if (!creative()) {
+        if (!canOpenGradient()) {
             mc.displayGuiScreen(parent);
         }
     }
@@ -96,7 +96,7 @@ public final class GradientScreen extends ToolScreen {
                 drawRefresh(sx, i == refresh);
             }
         }
-        drawTrash(TRASH_X, HOTBAR_Y, true);
+        drawTrash(TRASH_X, HOTBAR_Y, creative());
         highlight(TRASH_X, HOTBAR_Y, x, y);
 
         drawFilters(FILTER_X, FILTER_Y, settings.filters(), x, y);
@@ -108,7 +108,7 @@ public final class GradientScreen extends ToolScreen {
             pattern.ordinal(),
             patternFocused,
             patternDragging || PATTERN_SLIDER.contains(x, y));
-        drawAction("Apply to hotbar", APPLY_X, HOTBAR_Y, APPLY_W, SLOT, x, y, hasOutput);
+        drawAction("Apply to hotbar", APPLY_X, HOTBAR_Y, APPLY_W, SLOT, x, y, creative() && hasOutput);
         drawCursor(held, x, y);
         endPanel();
     }
@@ -162,11 +162,14 @@ public final class GradientScreen extends ToolScreen {
         } else if (!patternDragging && PATTERN_SLIDER.contains(x, y)) {
             lines = PATTERN_TOOLTIP;
         } else if (inside(x, y, APPLY_X, HOTBAR_Y, APPLY_W, SLOT)) {
-            if (colors.isIndexed()) {
+            if (!creative()) {
+                lines = Arrays.asList("Available in Creative or Creative+");
+            } else if (colors.isIndexed()) {
                 lines = Arrays.asList(hasOutput() ? "Clears hotbar slots with no output" : "Add an input block first");
             }
         } else if (inside(x, y, TRASH_X, HOTBAR_Y, SLOT, SLOT)) {
-            lines = Arrays.asList("Destroy Item", "Shift-click to clear the hotbar");
+            lines = creative() ? Arrays.asList("Destroy Item", "Shift-click to clear the hotbar")
+                : Arrays.asList("Available in Creative mode");
         } else if (input >= 0) {
             ItemStack stack = gradient.input(input);
             lines = stack == null ? Arrays.asList("Input", "Drop a block here")
@@ -183,7 +186,7 @@ public final class GradientScreen extends ToolScreen {
 
     @Override
     void clickPanel(int x, int y, int button) {
-        if (!creative()) {
+        if (!canOpenGradient()) {
             return;
         }
         patternFocused = false;
@@ -218,13 +221,13 @@ public final class GradientScreen extends ToolScreen {
         }
         int hotbar = slotAt(x, y, HOTBAR_Y);
         if (hotbar >= 0 && button == 0) {
-            if (isShiftKeyDown()) {
+            if (creative() && isShiftKeyDown()) {
                 putInventory(hotbar, null);
                 clearHeld();
             } else if (held != null) {
                 placeHotbar(hotbar);
             } else if (hotbar(hotbar) != null) {
-                startHolding(hotbar(hotbar), hotbar, x, y, false);
+                startHolding(hotbar(hotbar), creative() ? hotbar : -1, x, y, false);
             }
             return;
         }
@@ -238,14 +241,16 @@ public final class GradientScreen extends ToolScreen {
             patternDragging = true;
             patternFocused = true;
             settings.setPatternStep(PATTERN_SLIDER.mouseStep(x));
-        } else if (inside(x, y, APPLY_X, HOTBAR_Y, APPLY_W, SLOT) && hasOutput()) {
-            for (int i = 0; i < Gradient.SLOTS; i++) {
-                ItemStack result = gradient.output(i);
-                putInventory(i, result == null ? null : result.copy());
+        } else if (inside(x, y, APPLY_X, HOTBAR_Y, APPLY_W, SLOT)) {
+            if (creative() && hasOutput()) {
+                for (int i = 0; i < Gradient.SLOTS; i++) {
+                    ItemStack result = gradient.output(i);
+                    putInventory(i, result == null ? null : result.copy());
+                }
+                clearHeld();
             }
-            clearHeld();
         } else if (inside(x, y, TRASH_X, HOTBAR_Y, SLOT, SLOT)) {
-            if (isShiftKeyDown()) {
+            if (creative() && isShiftKeyDown()) {
                 for (int i = 0; i < Gradient.SLOTS; i++) {
                     putInventory(i, null);
                 }
@@ -259,7 +264,7 @@ public final class GradientScreen extends ToolScreen {
     @Override
     protected void mouseClickMove(int mouseX, int mouseY, int button, long elapsed) {
         super.mouseClickMove(mouseX, mouseY, button, elapsed);
-        if (button == 0 && patternDragging && creative()) {
+        if (button == 0 && patternDragging && canOpenGradient()) {
             settings.setPatternStep(PATTERN_SLIDER.mouseStep(localX(mouseX)));
         }
     }
@@ -270,7 +275,7 @@ public final class GradientScreen extends ToolScreen {
         if (button == 0) {
             patternDragging = false;
         }
-        if (button != 0 || !creative() || !pickedUpThisClick || held == null) {
+        if (button != 0 || !canOpenGradient() || !pickedUpThisClick || held == null) {
             return;
         }
         pickedUpThisClick = false;
@@ -295,7 +300,7 @@ public final class GradientScreen extends ToolScreen {
             mc.displayGuiScreen(parent);
             return;
         }
-        if (!creative()) {
+        if (!canOpenGradient()) {
             return;
         }
         if (key == Keyboard.KEY_TAB) {
@@ -311,6 +316,10 @@ public final class GradientScreen extends ToolScreen {
                 settings.setPatternStep(step);
                 return;
             }
+        }
+        if (!creative()) {
+            super.keyTyped(typed, key);
+            return;
         }
         for (int i = 0; i < Gradient.SLOTS; i++) {
             if (key == mc.gameSettings.keyBindsHotbar[i].getKeyCode()) {
@@ -344,7 +353,7 @@ public final class GradientScreen extends ToolScreen {
     @Override
     boolean dropGhostStack(int x, int y, ItemStack stack) {
         int slot = slotAt(x, y, INPUT_Y);
-        if (slot < 0 || !creative()) {
+        if (slot < 0 || !canOpenGradient()) {
             return false;
         }
         if (!gradient.setInput(slot, stack, colors)) {
@@ -365,7 +374,7 @@ public final class GradientScreen extends ToolScreen {
     }
 
     private void placeHotbar(int slot) {
-        if (slot != heldFrom) {
+        if (creative() && slot != heldFrom) {
             if (heldFrom >= 0) {
                 putInventory(heldFrom, hotbar(slot));
             }
@@ -375,7 +384,7 @@ public final class GradientScreen extends ToolScreen {
     }
 
     private void discardHeld() {
-        if (heldFrom >= 0) {
+        if (creative() && heldFrom >= 0) {
             putInventory(heldFrom, null);
         }
         clearHeld();
