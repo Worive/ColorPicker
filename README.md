@@ -19,14 +19,6 @@ In `config/colorpicker.cfg` (or `config/colourpicker.cfg` on older installs), se
 - `true` (default) starts indexing in the background after you join a world.
 - `false` waits until you open ColorPicker or Gradient Helper. Closing the tool pauses the submission of new indexing work.
 
-## Development
-
-Run `./gradlew build` to compile, check, and package the mod. Java sources live under `com.worive.colorpicker`.
-
-- `ColorPickerMod` is the Forge entry point and owns the client session.
-- `client/color` contains block matching and gradient generation. Texture sampling and block shape checks live alongside the color index.
-- `client/gui` contains the two screens and NEI hooks. `PickerSettings` saves the shared filters and match tolerance, while `PickerColor` holds the current color for the client session.
-
 ## License
 
 [MIT License](LICENSE)
