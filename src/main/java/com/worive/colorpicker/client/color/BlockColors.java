@@ -1,9 +1,12 @@
 package com.worive.colorpicker.client.color;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -46,38 +49,84 @@ public final class BlockColors implements IResourceManagerReloadListener {
     private static final Comparator<Match> MATCH_ORDER = Comparator.comparingDouble((Match match) -> match.distance)
         .thenComparing(match -> match.entry, ENTRY_ORDER)
         .thenComparingInt(match -> match.order);
+    private static final int PENDING_VARIANT_LIMIT = 64;
 
     private final Map<Item, List<Entry>> byItem = new IdentityHashMap<>();
     private final TextureColors textures = new TextureColors();
     private final BlockShapes shapes = new BlockShapes();
-    private List<Entry> entries;
+    private final List<Entry> entries = new ArrayList<>();
+    private final Deque<PendingVariant> pending = new ArrayDeque<>();
+    private Iterator<?> items;
+    private Iterator<ItemStack> variants = Collections.emptyIterator();
+    private Item indexingItem;
+    private Block indexingBlock;
+    private boolean indexed;
     private long revision;
 
     @Override
     public void onResourceManagerReload(IResourceManager manager) {
-        revision++;
-        entries = null;
-        byItem.clear();
+        resetEntries();
         textures.clearCache();
+    }
+
+    /** Invalidates world-dependent variants and keeps decoded textures from the active resource pack. */
+    public void resetWorldIndex() {
+        resetEntries();
+        textures.cancelPending();
+    }
+
+    private void resetEntries() {
+        revision++;
+        indexed = false;
+        items = null;
+        variants = Collections.emptyIterator();
+        indexingItem = null;
+        indexingBlock = null;
+        entries.clear();
+        pending.clear();
+        byItem.clear();
     }
 
     public long revision() {
         return revision;
     }
 
+    public boolean isIndexed() {
+        return indexed;
+    }
+
+    /** Advances the index on the client thread, checking the time allowance in nanoseconds between steps. */
+    public void advanceIndex(long budgetNanos) {
+        if (indexed) {
+            return;
+        }
+        if (items == null) {
+            items = Item.itemRegistry.iterator();
+        }
+        long start = System.nanoTime();
+        do {
+            if (!indexNext()) {
+                return;
+            }
+        } while (System.nanoTime() - start < budgetNanos);
+    }
+
     List<Entry> closest(double[] lab, int filter, int limit) {
         return closest(lab, filter, limit, Double.POSITIVE_INFINITY);
     }
 
-    /** Returns the closest blocks satisfying all selected flags within the squared Oklab distance. */
+    /** Returns matching blocks ordered by squared Oklab distance, or an empty list while indexing. */
     public List<Entry> closest(int rgb, int filter, int limit, double maxDistanceSquared) {
         return closest(ColorMath.lab(rgb), filter, limit, maxDistanceSquared);
     }
 
     private List<Entry> closest(double[] lab, int filter, int limit, double maxDistanceSquared) {
+        if (!indexed) {
+            return Collections.emptyList();
+        }
         PriorityQueue<Match> nearest = new PriorityQueue<>(limit, MATCH_ORDER.reversed());
         int order = 0;
-        for (Entry entry : entries()) {
+        for (Entry entry : entries) {
             if ((entry.flags & filter) != filter) {
                 continue;
             }
@@ -96,13 +145,6 @@ public final class BlockColors implements IResourceManagerReloadListener {
         }
         Collections.reverse(result);
         return result;
-    }
-
-    private List<Entry> entries() {
-        if (entries == null) {
-            index();
-        }
-        return entries;
     }
 
     public Integer sample(ItemStack stack) {
@@ -136,48 +178,79 @@ public final class BlockColors implements IResourceManagerReloadListener {
         return faces == null ? null : faces.rgb;
     }
 
-    private void index() {
-        List<Entry> found = new ArrayList<>();
-        for (Object value : Item.itemRegistry) {
-            Item item = (Item) value;
-            Block block = blockFor(item);
-            if (block == null || block == Blocks.air) {
-                continue;
-            }
-            List<ItemStack> variants = new ArrayList<>();
+    private boolean indexNext() {
+        PendingVariant next = pending.peekFirst();
+        if (next != null && next.faces.isReady()) {
+            pending.removeFirst();
             try {
-                for (CreativeTabs tab : item.getCreativeTabs()) {
-                    if (tab != null) {
-                        item.getSubItems(item, tab, variants);
-                        if (variants.isEmpty()) {
-                            variants.add(new ItemStack(item));
-                        }
-                        break;
-                    }
+                Entry entry = readBlock(next.stack, next.block, next.metadata, next.faces.colors(next.tint));
+                if (entry != null) {
+                    entries.add(entry);
+                    byItem.computeIfAbsent(next.stack.getItem(), item -> new ArrayList<>())
+                        .add(entry);
                 }
             } catch (RuntimeException failure) {
-                LOG.debug("Could not enumerate {}", Item.itemRegistry.getNameForObject(item), failure);
+                LOG.debug("Could not sample {}", Item.itemRegistry.getNameForObject(next.stack.getItem()), failure);
             }
-            List<Entry> indexed = new ArrayList<>();
-            for (ItemStack variant : variants) {
-                if (variant == null || variant.getItem() != item) {
-                    continue;
-                }
+            return true;
+        }
+        if (pending.size() >= PENDING_VARIANT_LIMIT) {
+            return false;
+        }
+        if (variants.hasNext()) {
+            ItemStack variant = variants.next();
+            if (variant != null && variant.getItem() == indexingItem) {
                 try {
                     ItemStack stack = single(variant);
-                    Entry entry = readBlock(stack, block, item.getMetadata(stack.getItemDamage()));
-                    if (entry != null) {
-                        indexed.add(entry);
-                    }
+                    int metadata = indexingItem.getMetadata(stack.getItemDamage());
+                    int tint = indexingBlock.getRenderColor(metadata);
+                    pending.addLast(
+                        new PendingVariant(
+                            stack,
+                            indexingBlock,
+                            metadata,
+                            tint,
+                            textures.faceTextures(indexingBlock, metadata, true)));
                 } catch (RuntimeException failure) {
-                    LOG.debug("Could not sample {}", Item.itemRegistry.getNameForObject(item), failure);
+                    LOG.debug("Could not sample {}", Item.itemRegistry.getNameForObject(indexingItem), failure);
                 }
             }
-            found.addAll(indexed);
-            byItem.put(item, indexed);
+            return true;
         }
-        entries = found;
-        LOG.debug("Indexed {} block variants", entries.size());
+        if (!items.hasNext()) {
+            if (next != null) {
+                return false;
+            }
+            indexed = true;
+            items = null;
+            variants = Collections.emptyIterator();
+            indexingItem = null;
+            indexingBlock = null;
+            revision++;
+            LOG.debug("Indexed {} block variants", entries.size());
+            return false;
+        }
+        indexingItem = (Item) items.next();
+        indexingBlock = blockFor(indexingItem);
+        if (indexingBlock == null || indexingBlock == Blocks.air) {
+            return true;
+        }
+        List<ItemStack> stacks = new ArrayList<>();
+        try {
+            for (CreativeTabs tab : indexingItem.getCreativeTabs()) {
+                if (tab != null) {
+                    indexingItem.getSubItems(indexingItem, tab, stacks);
+                    if (stacks.isEmpty()) {
+                        stacks.add(new ItemStack(indexingItem));
+                    }
+                    break;
+                }
+            }
+        } catch (RuntimeException failure) {
+            LOG.debug("Could not enumerate {}", Item.itemRegistry.getNameForObject(indexingItem), failure);
+        }
+        variants = stacks.iterator();
+        return true;
     }
 
     private static Block blockFor(Item item) {
@@ -197,7 +270,10 @@ public final class BlockColors implements IResourceManagerReloadListener {
     }
 
     private Entry readBlock(ItemStack stack, Block block, int metadata) {
-        TextureColors.Faces faces = textures.faces(block, metadata, block.getRenderColor(metadata));
+        return readBlock(stack, block, metadata, textures.faces(block, metadata, block.getRenderColor(metadata)));
+    }
+
+    private Entry readBlock(ItemStack stack, Block block, int metadata, TextureColors.Faces faces) {
         if (faces == null) {
             return null;
         }
@@ -224,6 +300,23 @@ public final class BlockColors implements IResourceManagerReloadListener {
             flags |= NO_FALLING;
         }
         return new Entry(stack, faces.rgb, flags | faces.pattern.bit);
+    }
+
+    private static final class PendingVariant {
+
+        final ItemStack stack;
+        final Block block;
+        final int metadata;
+        final int tint;
+        final TextureColors.FaceTextures faces;
+
+        PendingVariant(ItemStack stack, Block block, int metadata, int tint, TextureColors.FaceTextures faces) {
+            this.stack = stack;
+            this.block = block;
+            this.metadata = metadata;
+            this.tint = tint;
+            this.faces = faces;
+        }
     }
 
     public static final class Entry {

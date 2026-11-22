@@ -311,7 +311,7 @@ public final class PickerScreen extends ToolScreen {
         GL11.glColor4f(1, 1, 1, 1);
         drawTexturedModalRect(SCROLL_X + 1, thumbY, last > 0 ? 232 : 244, 0, 12, THUMB_H);
         if (matches.isEmpty()) {
-            String empty = "No matches";
+            String empty = colors.isIndexed() ? "No matches" : "Indexing blocks...";
             int center = MATCH_X + COLUMNS * CELL / 2;
             int textWidth = fontRendererObj.getStringWidth(empty);
             int emptyTop = MATCH_Y + (GRID_HEIGHT - 16) / 2;

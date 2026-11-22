@@ -82,7 +82,7 @@ public final class GradientScreen extends ToolScreen {
         } else if (!hasOutput) {
             fontRendererObj.drawString("Drag blocks here", 52, INPUT_Y - 12, MUTED);
         }
-        fontRendererObj.drawString("Outputs", ROW_X, OUTPUT_Y - 12, LABEL);
+        fontRendererObj.drawString(colors.isIndexed() ? "Outputs" : "Indexing blocks...", ROW_X, OUTPUT_Y - 12, LABEL);
         drawRect(ROW_X, HOTBAR_Y - 17, TRASH_X + SLOT, HOTBAR_Y - 16, BORDER);
         fontRendererObj.drawString("Hotbar", ROW_X, HOTBAR_Y - 12, LABEL);
 
@@ -162,7 +162,9 @@ public final class GradientScreen extends ToolScreen {
         } else if (!patternDragging && PATTERN_SLIDER.contains(x, y)) {
             lines = PATTERN_TOOLTIP;
         } else if (inside(x, y, APPLY_X, HOTBAR_Y, APPLY_W, SLOT)) {
-            lines = Arrays.asList(hasOutput() ? "Clears hotbar slots with no output" : "Add an input block first");
+            if (colors.isIndexed()) {
+                lines = Arrays.asList(hasOutput() ? "Clears hotbar slots with no output" : "Add an input block first");
+            }
         } else if (inside(x, y, TRASH_X, HOTBAR_Y, SLOT, SLOT)) {
             lines = Arrays.asList("Destroy Item", "Shift-click to clear the hotbar");
         } else if (input >= 0) {
@@ -390,6 +392,9 @@ public final class GradientScreen extends ToolScreen {
     }
 
     private boolean hasOutput() {
+        if (!colors.isIndexed()) {
+            return false;
+        }
         for (int i = 0; i < Gradient.SLOTS; i++) {
             if (gradient.output(i) != null) {
                 return true;

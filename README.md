@@ -12,6 +12,13 @@ ColorPicker is a client-side mod for Minecraft 1.7.10 that finds blocks by color
 | Gradient Helper | Fill gaps between input blocks, cycle through alternatives, and apply the gradient to your hotbar in Creative mode. |
 | NEI integration | Sample blocks or use them as gradient inputs directly from Not Enough Items. |
 
+## When block indexing runs
+
+In `config/colorpicker.cfg` (or `config/colourpicker.cfg` on older installs), set `B:indexOnWorldJoin` in the `general` section and restart Minecraft.
+
+- `true` (default) starts indexing in the background after you join a world.
+- `false` waits until you open ColorPicker or Gradient Helper. Closing the tool pauses the submission of new indexing work.
+
 ## Development
 
 Run `./gradlew build` to compile, check, and package the mod. Java sources live under `com.worive.colorpicker`.

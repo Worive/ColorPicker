@@ -18,12 +18,19 @@ public final class PickerSettings {
     private final Configuration config;
     private final Property matchTolerance;
     private final Property enabledFilters;
+    private final boolean indexOnWorldJoin;
     private Tolerance tolerance;
     private int filters;
 
     /** Loads preferences from the game's config directory, including installs using the original filename. */
     public PickerSettings(File gameDirectory) {
         config = new Configuration(configFile(gameDirectory));
+        indexOnWorldJoin = config.getBoolean(
+            "indexOnWorldJoin",
+            Configuration.CATEGORY_GENERAL,
+            true,
+            "Start indexing blocks in the background after joining a world. "
+                + "Set to false to wait until ColorPicker or Gradient Helper opens.");
         enabledFilters = config.get(
             Configuration.CATEGORY_GENERAL,
             "enabledFilters",
@@ -56,6 +63,10 @@ public final class PickerSettings {
         File config = new File(gameDirectory, "config/colorpicker.cfg");
         File legacyConfig = new File(gameDirectory, "config/colourpicker.cfg");
         return !config.exists() && legacyConfig.isFile() ? legacyConfig : config;
+    }
+
+    public boolean indexOnWorldJoin() {
+        return indexOnWorldJoin;
     }
 
     int filters() {

@@ -6,7 +6,9 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiDownloadTerrain;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.util.MovingObjectPosition;
@@ -29,6 +31,7 @@ import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
@@ -51,6 +54,8 @@ public final class ColorPickerMod {
     @SideOnly(Side.CLIENT)
     public static final class Client {
 
+        private static final long WORLD_INDEX_BUDGET_NANOS = 1_000_000;
+
         private final Minecraft minecraft = Minecraft.getMinecraft();
         private final KeyBinding open = new KeyBinding(
             "key.colorpicker.open",
@@ -60,6 +65,7 @@ public final class ColorPickerMod {
         private final PickerSettings settings = new PickerSettings(minecraft.mcDataDir);
         private final PickerColor pickerColor = new PickerColor();
         private final Gradient gradient = new Gradient();
+        private WorldClient indexWorld;
 
         void register() {
             if (Loader.isModLoaded("NotEnoughItems")) {
@@ -102,6 +108,27 @@ public final class ColorPickerMod {
         public void keyPressed(InputEvent.KeyInputEvent event) {
             if (open.isPressed() && minecraft.currentScreen == null && minecraft.thePlayer != null) {
                 show(null, minecraft.objectMouseOver, false);
+            }
+        }
+
+        @SubscribeEvent
+        public void indexBlocks(TickEvent.RenderTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) {
+                return;
+            }
+            WorldClient world = minecraft.theWorld;
+            if (world != indexWorld) {
+                if (indexWorld != null) {
+                    colors.resetWorldIndex();
+                }
+                indexWorld = world;
+            }
+            GuiScreen screen = minecraft.currentScreen;
+            if (world != null && minecraft.thePlayer != null
+                && !(screen instanceof GuiDownloadTerrain)
+                && (settings.indexOnWorldJoin() || screen instanceof PickerScreen
+                    || screen instanceof GradientScreen)) {
+                colors.advanceIndex(WORLD_INDEX_BUDGET_NANOS);
             }
         }
 
